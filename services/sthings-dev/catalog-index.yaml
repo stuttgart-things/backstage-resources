@@ -1,0 +1,10 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: stuttgart-things-services
+  description: All stuttgart-things services
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/claim-machinery-api/blob/main/catalog-info.yaml
