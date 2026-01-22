@@ -27,3 +27,15 @@ metadata:
 spec:
   type: team
   children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform-team
+  description: Platform Engineering Team
+spec:
+  type: team
+  children: []
+  members:
+    - patrick-hermann-sva
+    - sina-schlatter
