@@ -8,3 +8,4 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/claim-machinery-api/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/sthings-backstage/blob/main/catalog-info.yaml
