@@ -27,6 +27,10 @@ coverage
 
 # Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
 .grunt
+*.task*
+
+# Task runner cache
+.task/
 
 # Bower dependency directory (https://bower.io/)
 bower_components
