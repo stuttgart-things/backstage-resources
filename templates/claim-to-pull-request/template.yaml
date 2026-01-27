@@ -18,6 +18,7 @@ spec:
         claimTemplate:
           title: Claim Template
           type: string
+          description: Select a Claim Machinery template to render
           ui:field: ClaimMachineryPicker
           ui:options:
             allowArbitraryValues: false
@@ -26,13 +27,25 @@ spec:
           title: Claim Name
           type: string
           default: test-claim
+          description: Name for your claim resource
           pattern: '^[a-z0-9-]+$'
 
+        prTitlePreview:
+          title: Pull Request Title (preview)
+          type: string
+          ui:readonly: true
+          default: "Add <claimTemplate> claim - <claimName>"
+          description: |
+            The pull request title will be automatically generated as:
+            "Add <template> claim - <name>"
+
     - title: Template Parameters
+      description: Configure the parameters for your selected template
       properties:
         parameters:
           title: Template Parameters
           type: object
+          description: Parameters specific to the selected template
           ui:field: ClaimMachineryParameters
 
     - title: GitHub Target
@@ -53,6 +66,7 @@ spec:
         targetPath:
           title: Target Path in Repository
           type: string
+          description: Path where the manifest will be stored
           default: claims
 
   steps:
@@ -64,12 +78,25 @@ spec:
         parameters: ${{ parameters.parameters }}
         outputPath: ${{ parameters.targetPath }}
 
+    - id: log-manifest
+      name: Show Rendered Manifest
+      action: debug:log
+      input:
+        message: |
+          Claim rendered successfully!
+
+          File: ${{ steps['render'].output.filePath }}
+
+          Manifest content:
+          ${{ steps['render'].output.manifest }}
+
     - id: create-pull-request
       name: Create GitHub Pull Request
       action: publish:github:pull-request
       input:
         repoUrl: ${{ parameters.repoUrl }}
         branchName: claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}
+        update: true
         title: Add ${{ parameters.claimTemplate }} claim - ${{ parameters.claimName }}
         description: |
           ## Claim Manifest Created via Backstage
@@ -77,13 +104,45 @@ spec:
           **Template**: ${{ parameters.claimTemplate }}
           **Claim Name**: ${{ parameters.claimName }}
 
+          ### Manifest Details
           ```yaml
           ${{ steps['render'].output.manifest }}
           ```
+
+          Created automatically via Backstage Claim Machinery integration.
         targetPath: ${{ parameters.targetPath }}
+
+    - id: log-summary
+      name: Summary
+      action: debug:log
+      input:
+        message: |
+          Template: ${{ parameters.claimTemplate }}
+          Manifest saved to: ${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}
+          Pull Request created successfully!
 
   output:
     links:
       - title: GitHub Pull Request
         icon: github
         url: ${{ steps['create-pull-request'].output.remoteUrl }}
+      - title: Rendered Manifest
+        icon: description
+        content: |
+          ```yaml
+          ${{ steps['render'].output.manifest }}
+          ```
+    text:
+      - title: Pull Request Created
+        content: |
+          A pull request has been created at:
+          ${{ steps['create-pull-request'].output.remoteUrl }}
+
+          Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}`
+      - title: File Location
+        content: The manifest will be saved to `${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}`
+      - title: Next Steps
+        content: |
+          1. Review the pull request in GitHub
+          2. Merge the PR to add the claim to the repository
+          3. Apply the manifest to your cluster: `kubectl apply -f ${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}`
