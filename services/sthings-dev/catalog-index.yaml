@@ -19,5 +19,4 @@ metadata:
 spec:
   type: url
   targets:
-    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/claim-simple/template.yaml
-    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/claim-to-merge-request/template.yaml
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/claim-to-pull-request/template.yaml
