@@ -38,24 +38,36 @@ spec:
           description: Parameters specific to the selected template
           ui:field: ClaimMachineryParameters
 
-    - title: GitHub Repository
+    - title: GitHub Target
       description: Target repository for the manifest
       required:
-        - repoUrl
+        - githubOrg
+        - repo
         - targetPath
       properties:
-        repoUrl:
-          title: Repository Location
+        githubOrg:
+          title: GitHub Organization
+          type: string
+          enum:
+            - my-org-1
+            - my-org-2
+          description: Select the GitHub organization
+
+        repo:
+          title: Repository
           type: string
           ui:field: RepoUrlPicker
           ui:options:
             allowedHosts:
               - github.com
+            # Custom option to filter repos by selected org
+            allowedOrganizationsFromParam: githubOrg
+
         targetPath:
           title: Target Path in Repository
           type: string
-          description: Path where the manifest will be stored (e.g., claims/production)
-          default: claims
+          description: Path where the manifest will be stored
+          default: claims/${{ parameters.githubOrg }}/${{ parameters.repo }}
 
   steps:
     - id: render
@@ -82,7 +94,7 @@ spec:
       name: Create GitHub Pull Request
       action: publish:github:pull-request
       input:
-        repoUrl: ${{ parameters.repoUrl }}
+        repoUrl: ${{ steps['repo'].output }}
         branchName: claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}
         title: Add ${{ parameters.claimTemplate }} claim - ${{ parameters.claimName }}
         description: |
@@ -127,7 +139,7 @@ spec:
 
           Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}`
       - title: File Location
-        content: The manifest will be saved to `${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}` after the PR is merged
+        content: The manifest will be saved to `${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}`
       - title: Next Steps
         content: |
           1. Review the pull request in GitHub
