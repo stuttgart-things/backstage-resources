@@ -1,16 +1,13 @@
+---
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: test-claim-simple
-  title: Test Claim Machinery
-  description: Simple test for claim rendering
-  tags:
-    - claim-machinery
-    - crossplane
+  name: claim-to-pull-request
+  title: Render claim and Create Pull Request
+  description: Create a GitHub Pull Request with a rendered claim manifest
 spec:
   owner: platform-team
   type: test
-
   parameters:
     - title: Basic Info
       required:
@@ -41,11 +38,19 @@ spec:
           description: Parameters specific to the selected template
           ui:field: ClaimMachineryParameters
 
-    - title: GitLab Repository
+    - title: GitHub Repository
       description: Target repository for the manifest
       required:
+        - repoUrl
         - targetPath
       properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
         targetPath:
           title: Target Path in Repository
           type: string
@@ -74,10 +79,10 @@ spec:
           ${{ steps['render'].output.manifest }}
 
     - id: create-pull-request
-      name: Create GitLab Merge Request
-      action: publish:gitlab:merge-request
+      name: Create GitHub Pull Request
+      action: publish:github:pull-request
       input:
-        repoUrl: codehub.sva.de?owner=Lab/stuttgart-things/idp&repo=resource-engines
+        repoUrl: ${{ parameters.repoUrl }}
         branchName: claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}
         title: Add ${{ parameters.claimTemplate }} claim - ${{ parameters.claimName }}
         description: |
@@ -101,13 +106,13 @@ spec:
         message: |
           Template: ${{ parameters.claimTemplate }}
           Manifest saved to: ${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}
-          Merge Request created successfully!
+          Pull Request created successfully!
 
   output:
     links:
-      - title: GitLab Merge Request
-        url: ${{ steps['create-pull-request'].output.mergeRequestUrl }}
-        icon: gitlab
+      - title: GitHub Pull Request
+        url: ${{ steps['create-pull-request'].output.remoteUrl }}
+        icon: github
       - title: Rendered Manifest
         icon: description
         content: |
@@ -115,16 +120,16 @@ spec:
           ${{ steps['render'].output.manifest }}
           ```
     text:
-      - title: Merge Request Created
+      - title: Pull Request Created
         content: |
-          A merge request has been created at:
-          ${{ steps['create-pull-request'].output.mergeRequestUrl }}
+          A pull request has been created at:
+          ${{ steps['create-pull-request'].output.remoteUrl }}
 
           Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}`
       - title: File Location
-        content: The manifest will be saved to `${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}` after the MR is merged
+        content: The manifest will be saved to `${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}` after the PR is merged
       - title: Next Steps
         content: |
-          1. Review the merge request in GitLab
-          2. Merge the MR to add the claim to the repository
+          1. Review the pull request in GitHub
+          2. Merge the PR to add the claim to the repository
           3. Apply the manifest to your cluster: `kubectl apply -f ${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}`
