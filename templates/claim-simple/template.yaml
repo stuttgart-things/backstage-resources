@@ -1,0 +1,130 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: test-claim-simple
+  title: Test Claim Machinery
+  description: Simple test for claim rendering
+  tags:
+    - claim-machinery
+    - crossplane
+spec:
+  owner: platform-team
+  type: test
+
+  parameters:
+    - title: Basic Info
+      required:
+        - claimTemplate
+        - claimName
+      properties:
+        claimTemplate:
+          title: Claim Template
+          type: string
+          description: Select a Claim Machinery template to render
+          ui:field: ClaimMachineryPicker
+          ui:options:
+            allowArbitraryValues: false
+
+        claimName:
+          title: Claim Name
+          type: string
+          default: test-claim
+          description: Name for your claim resource
+          pattern: '^[a-z0-9-]+$'
+
+    - title: Template Parameters
+      description: Configure the parameters for your selected template
+      properties:
+        parameters:
+          title: Template Parameters
+          type: object
+          description: Parameters specific to the selected template
+          ui:field: ClaimMachineryParameters
+
+    - title: GitLab Repository
+      description: Target repository for the manifest
+      required:
+        - targetPath
+      properties:
+        targetPath:
+          title: Target Path in Repository
+          type: string
+          description: Path where the manifest will be stored (e.g., claims/production)
+          default: claims
+
+  steps:
+    - id: render
+      name: Render Claim
+      action: claim-machinery:render
+      input:
+        template: ${{ parameters.claimTemplate }}
+        parameters: ${{ parameters.parameters }}
+        outputPath: ${{ parameters.targetPath }}
+
+    - id: log-manifest
+      name: Show Rendered Manifest
+      action: debug:log
+      input:
+        message: |
+          Claim rendered successfully!
+
+          File: ${{ steps['render'].output.filePath }}
+
+          Manifest content:
+          ${{ steps['render'].output.manifest }}
+
+    - id: create-pull-request
+      name: Create GitLab Merge Request
+      action: publish:gitlab:merge-request
+      input:
+        repoUrl: codehub.sva.de?owner=Lab/stuttgart-things/idp&repo=resource-engines
+        branchName: claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}
+        title: Add ${{ parameters.claimTemplate }} claim - ${{ parameters.claimName }}
+        description: |
+          ## Claim Manifest Created via Backstage
+
+          **Template**: ${{ parameters.claimTemplate }}
+          **Claim Name**: ${{ parameters.claimName }}
+
+          ### Manifest Details
+          ```yaml
+          ${{ steps['render'].output.manifest }}
+          ```
+
+          Created automatically via Backstage Claim Machinery integration.
+        targetPath: ${{ parameters.targetPath }}
+
+    - id: log-summary
+      name: Summary
+      action: debug:log
+      input:
+        message: |
+          Template: ${{ parameters.claimTemplate }}
+          Manifest saved to: ${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}
+          Merge Request created successfully!
+
+  output:
+    links:
+      - title: GitLab Merge Request
+        url: ${{ steps['create-pull-request'].output.mergeRequestUrl }}
+        icon: gitlab
+      - title: Rendered Manifest
+        icon: description
+        content: |
+          ```yaml
+          ${{ steps['render'].output.manifest }}
+          ```
+    text:
+      - title: Merge Request Created
+        content: |
+          A merge request has been created at:
+          ${{ steps['create-pull-request'].output.mergeRequestUrl }}
+
+          Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}`
+      - title: File Location
+        content: The manifest will be saved to `${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}` after the MR is merged
+      - title: Next Steps
+        content: |
+          1. Review the merge request in GitLab
+          2. Merge the MR to add the claim to the repository
+          3. Apply the manifest to your cluster: `kubectl apply -f ${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}`
