@@ -20,3 +20,13 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/claim-to-pull-request/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: terraform-dagger-templates
+  description: Terraform and Dagger software templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/vsphere-vm/template.yaml
