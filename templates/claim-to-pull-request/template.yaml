@@ -3,11 +3,17 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: claim-to-pull-request
-  title: Render claim and Create Pull Request
+  title: Crossplane Resource claims
   description: Create a GitHub Pull Request with a rendered claim manifest
+  tags:
+    - crossplane
+    - kubernetes
+    - infrastructure
+    - gitops
+    - claims
 spec:
   owner: platform-team
-  type: test
+  type: service
 
   parameters:
     - title: Basic Info
