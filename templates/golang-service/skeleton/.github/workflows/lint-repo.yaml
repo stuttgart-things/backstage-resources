@@ -1,6 +1,6 @@
 ---
 name: Run Repository Linting
-on:
+"on":
   push:
     branches:
       - main

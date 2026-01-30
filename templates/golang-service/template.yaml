@@ -85,13 +85,13 @@ spec:
         goVersion:
           title: Go Version
           type: string
-          default: "1.24.12"
+          default: "1.25.6"
           enum:
-            - "1.24.12"
             - "1.25.6"
-          enumNames:
             - "1.24.12"
+          enumNames:
             - "1.25.6 (Latest)"
+            - "1.24.12"
 
   steps:
     - id: fetch-base
