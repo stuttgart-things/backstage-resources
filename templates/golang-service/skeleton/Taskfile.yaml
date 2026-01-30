@@ -15,56 +15,12 @@ includes:
     taskfile: https://raw.githubusercontent.com/stuttgart-things/tasks/refs/heads/main/go/lint.yaml
 
 tasks:
-  default:
-    desc: List all available tasks
+  do:
+    desc: Select a task to run
     cmds:
-      - task --list
+      - |
+        # Extract task names (keep internal colons, remove only trailing colon)
+        task_name=$(task -l | awk '/^\*/ {print $2}' | sed 's/:$//' | gum choose)
 
-  build:
-    desc: Build the binary
-    cmds:
-      - go build -o {{"{{"}}.BIN_DIR{{"}}"}}/{{"{{"}}.PROJECT{{"}}"}} .
-    sources:
-      - "**/*.go"
-      - go.mod
-      - go.sum
-    generates:
-      - "{{"{{"}}.BIN_DIR{{"}}"}}/{{"{{"}}.PROJECT{{"}}"}}"
-
-  run:
-    desc: Run the application
-    cmds:
-      - go run .
-
-  test:
-    desc: Run tests
-    cmds:
-      - go test -v ./...
-
-  test-coverage:
-    desc: Run tests with coverage
-    cmds:
-      - go test -v -coverprofile=coverage.out ./...
-      - go tool cover -html=coverage.out -o coverage.html
-
-  lint:
-    desc: Run golangci-lint
-    cmds:
-      - golangci-lint run ./...
-
-  fmt:
-    desc: Format code
-    cmds:
-      - go fmt ./...
-
-  tidy:
-    desc: Tidy and verify go modules
-    cmds:
-      - go mod tidy
-      - go mod verify
-
-  clean:
-    desc: Clean build artifacts
-    cmds:
-      - rm -rf {{"{{"}}.BIN_DIR{{"}}"}}
-      - rm -f coverage.out coverage.html
+        # Run the selected task
+        [ -n "$task_name" ] && task "$task_name"
