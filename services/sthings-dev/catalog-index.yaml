@@ -39,4 +39,4 @@ metadata:
 spec:
   type: url
   targets:
-    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/golang-service/template.yaml
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/golang-service/template.yaml
