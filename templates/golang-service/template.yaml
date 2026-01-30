@@ -1,0 +1,142 @@
+---
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: golang-service
+  title: Go Service
+  description: Create a new Go service with GitHub repository, Taskfile, and basic project structure
+  tags:
+    - golang
+    - service
+    - recommended
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Service Information
+      required:
+        - name
+        - description
+        - owner
+      properties:
+        name:
+          title: Service Name
+          type: string
+          description: Unique name of the service (lowercase, hyphens allowed)
+          pattern: '^[a-z][a-z0-9-]*$'
+          ui:autofocus: true
+
+        description:
+          title: Description
+          type: string
+          description: A brief description of the service
+
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the service
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+
+    - title: Repository Configuration
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          default: github.com?owner=stuttgart-things
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+            allowedOwners:
+              - stuttgart-things
+
+        visibility:
+          title: Repository Visibility
+          type: string
+          default: public
+          enum:
+            - public
+            - private
+          enumNames:
+            - Public
+            - Private
+
+    - title: Go Configuration
+      properties:
+        goModule:
+          title: Go Module Path
+          type: string
+          description: "Go module path (e.g., github.com/org/repo). Leave empty to auto-generate."
+
+        goVersion:
+          title: Go Version
+          type: string
+          default: "1.24"
+          enum:
+            - "1.24"
+            - "1.23"
+            - "1.22"
+          enumNames:
+            - "1.24 (Latest)"
+            - "1.23"
+            - "1.22"
+
+  steps:
+    - id: fetch-base
+      name: Fetch Base Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          goModule: ${{ parameters.goModule or 'github.com/' + (parameters.repoUrl | parseRepoUrl).owner + '/' + (parameters.repoUrl | parseRepoUrl).repo }}
+          goVersion: ${{ parameters.goVersion }}
+          repoUrl: ${{ parameters.repoUrl }}
+          repoOwner: ${{ (parameters.repoUrl | parseRepoUrl).owner }}
+          repoName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        allowedHosts:
+          - github.com
+        repoUrl: ${{ parameters.repoUrl }}
+        description: ${{ parameters.description }}
+        repoVisibility: ${{ parameters.visibility }}
+        defaultBranch: main
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repository
+        icon: github
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
+    text:
+      - title: Repository Created
+        content: |
+          Your new Go service repository has been created at:
+          ${{ steps['publish'].output.remoteUrl }}
+      - title: Next Steps
+        content: |
+          1. Clone the repository: `git clone ${{ steps['publish'].output.remoteUrl }}`
+          2. Run `go mod tidy` to install dependencies
+          3. Run `task --list` to see available tasks
+          4. Start developing your service!
