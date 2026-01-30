@@ -8,11 +8,11 @@ vars:
 
 includes:
   git:
-    taskfile: https://raw.githubusercontent.com/stuttgart-things/sthings-go/refs/heads/main/.tasks/git/git.yaml
-    optional: true
+    taskfile: https://raw.githubusercontent.com/stuttgart-things/tasks/refs/heads/main/git/git.yaml
   lint:
-    taskfile: https://raw.githubusercontent.com/stuttgart-things/sthings-go/refs/heads/main/.tasks/git/linting.yaml
-    optional: true
+    taskfile: https://raw.githubusercontent.com/stuttgart-things/tasks/refs/heads/main/git/linting.yaml
+  go:
+    taskfile: https://raw.githubusercontent.com/stuttgart-things/tasks/refs/heads/main/go/lint.yaml
 
 tasks:
   default:
