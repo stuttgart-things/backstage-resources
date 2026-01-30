@@ -48,13 +48,18 @@ spec:
         repoUrl:
           title: Repository Location
           type: string
-          default: github.com?owner=stuttgart-things
+          description: Use the service name as the repository name
           ui:field: RepoUrlPicker
           ui:options:
             allowedHosts:
               - github.com
             allowedOwners:
               - stuttgart-things
+            requestUserCredentials:
+              secretsKey: USER_OAUTH_TOKEN # pragma: allowlist secret
+              additionalScopes:
+                github:
+                  - workflow
 
         visibility:
           title: Repository Visibility
@@ -77,15 +82,13 @@ spec:
         goVersion:
           title: Go Version
           type: string
-          default: "1.24"
+          default: "1.24.12"
           enum:
-            - "1.24"
-            - "1.23"
-            - "1.22"
+            - "1.24.12"
+            - "1.25.6"
           enumNames:
-            - "1.24 (Latest)"
-            - "1.23"
-            - "1.22"
+            - "1.24.12"
+            - "1.25.6 (Latest)"
 
   steps:
     - id: fetch-base
@@ -107,12 +110,11 @@ spec:
       name: Publish to GitHub
       action: publish:github
       input:
-        allowedHosts:
-          - github.com
         repoUrl: ${{ parameters.repoUrl }}
         description: ${{ parameters.description }}
         repoVisibility: ${{ parameters.visibility }}
         defaultBranch: main
+        token: ${{ secrets.USER_OAUTH_TOKEN }}
 
     - id: register
       name: Register in Catalog
