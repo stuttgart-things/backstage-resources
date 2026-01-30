@@ -16,16 +16,26 @@ spec:
   parameters:
     - title: Service Information
       required:
-        - name
+        - repoUrl
         - description
         - owner
       properties:
-        name:
-          title: Service Name
+        repoUrl:
+          title: Repository Location
           type: string
-          description: Unique name of the service (lowercase, hyphens allowed)
-          pattern: '^[a-z][a-z0-9-]*$'
+          description: The repository name will be used as the service name
+          ui:field: RepoUrlPicker
           ui:autofocus: true
+          ui:options:
+            allowedHosts:
+              - github.com
+            allowedOwners:
+              - stuttgart-things
+            requestUserCredentials:
+              secretsKey: USER_OAUTH_TOKEN # pragma: allowlist secret
+              additionalScopes:
+                github:
+                  - workflow
 
         description:
           title: Description
@@ -42,25 +52,7 @@ spec:
               kind: Group
 
     - title: Repository Configuration
-      required:
-        - repoUrl
       properties:
-        repoUrl:
-          title: Repository Location
-          type: string
-          description: Use the service name as the repository name
-          ui:field: RepoUrlPicker
-          ui:options:
-            allowedHosts:
-              - github.com
-            allowedOwners:
-              - stuttgart-things
-            requestUserCredentials:
-              secretsKey: USER_OAUTH_TOKEN # pragma: allowlist secret
-              additionalScopes:
-                github:
-                  - workflow
-
         visibility:
           title: Repository Visibility
           type: string
@@ -71,6 +63,17 @@ spec:
           enumNames:
             - Public
             - Private
+
+        repoTags:
+          title: Repository Tags
+          type: array
+          description: Tags/topics for the GitHub repository (e.g., golang, microservice)
+          items:
+            type: string
+          ui:options:
+            addable: true
+            orderable: false
+            removable: true
 
     - title: Go Configuration
       properties:
@@ -97,7 +100,7 @@ spec:
       input:
         url: ./skeleton
         values:
-          name: ${{ parameters.name }}
+          name: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
           description: ${{ parameters.description }}
           owner: ${{ parameters.owner }}
           goModule: ${{ parameters.goModule or 'github.com/' + (parameters.repoUrl | parseRepoUrl).owner + '/' + (parameters.repoUrl | parseRepoUrl).repo }}
@@ -115,6 +118,7 @@ spec:
         repoVisibility: ${{ parameters.visibility }}
         defaultBranch: main
         token: ${{ secrets.USER_OAUTH_TOKEN }}
+        topics: ${{ parameters.repoTags }}
 
     - id: register
       name: Register in Catalog
