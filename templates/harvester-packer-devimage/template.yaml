@@ -13,42 +13,13 @@ spec:
   type: service
 
   parameters:
-    - title: Packages
-      properties:
-        packages:
-          title: Packages
-          type: array
-          description: List of packages to install in the image
-          default:
-            - qemu-guest-agent
-            - vim
-            - curl
-            - git
-            - jq
-          items:
-            type: string
-          ui:options:
-            addable: true
-            orderable: false
-            removable: true
-
     - title: Users
       properties:
         users:
           title: Users
           type: array
-          description: Users to create in the image
-          default:
-            - name: sthings
-              groups: sudo
-              shell: /bin/bash
-              sudo: "ALL=(ALL) NOPASSWD:ALL"  # pragma: allowlist secret
-              ssh_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOoe/pqEulMLsJRxBqgbDtdOftsCHq9K2hU1Xr99FQZA sthings@sthings-air12"
-            - name: dev
-              groups: sudo
-              shell: /bin/bash
-              sudo: "ALL=(ALL) NOPASSWD:ALL"  # pragma: allowlist secret
-              ssh_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOoe/pqEulMLsJRxBqgbDtdOftsCHq9K2hU1Xr99FQZA sthings@sthings-air12"
+          description: Add additional users to create in the image
+          default: []
           items:
             type: object
             required: [name, ssh_key]
@@ -72,6 +43,29 @@ spec:
                 title: SSH Public Key
                 type: string
                 description: SSH public key for authorized access
+          ui:options:
+            addable: true
+            orderable: false
+            removable: true
+
+    - title: Packages
+      properties:
+        packages:
+          title: Packages
+          type: array
+          description: List of packages to install in the image
+          default:
+            - qemu-guest-agent
+            - vim
+            - curl
+            - git
+            - jq
+          items:
+            type: string
+          ui:options:
+            addable: true
+            orderable: false
+            removable: true
 
   steps:
     - id: fetch-base
