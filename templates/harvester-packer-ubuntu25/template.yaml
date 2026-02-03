@@ -1,0 +1,120 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: harvester-packer-ubuntu25
+  title: Update Harvester Packer Image (ubuntu25)
+  description: Modify packages and users for the ubuntu25 packer image and create a PR to trigger the build pipeline
+  tags:
+    - harvester
+    - packer
+    - infrastructure
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Packages
+      properties:
+        packages:
+          title: Packages
+          type: array
+          description: List of packages to install in the image
+          default:
+            - qemu-guest-agent
+            - vim
+            - curl
+            - git
+            - jq
+          items:
+            type: string
+          ui:options:
+            addable: true
+            orderable: false
+            removable: true
+
+    - title: Users
+      properties:
+        users:
+          title: Users
+          type: array
+          description: Users to create in the image
+          default:
+            - name: sthings
+              groups: sudo
+              shell: /bin/bash
+              sudo: "ALL=(ALL) NOPASSWD:ALL"
+              ssh_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOoe/pqEulMLsJRxBqgbDtdOftsCHq9K2hU1Xr99FQZA sthings@sthings-air12"
+            - name: dev
+              groups: sudo
+              shell: /bin/bash
+              sudo: "ALL=(ALL) NOPASSWD:ALL"
+              ssh_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOoe/pqEulMLsJRxBqgbDtdOftsCHq9K2hU1Xr99FQZA sthings@sthings-air12"
+          items:
+            type: object
+            required: [name, ssh_key]
+            properties:
+              name:
+                title: Username
+                type: string
+              groups:
+                title: Groups
+                type: string
+                default: sudo
+              shell:
+                title: Shell
+                type: string
+                default: /bin/bash
+              sudo:
+                title: Sudo rule
+                type: string
+                default: "ALL=(ALL) NOPASSWD:ALL"
+              ssh_key:
+                title: SSH Public Key
+                type: string
+                description: SSH public key for authorized access
+
+  steps:
+    - id: fetch-base
+      name: Render Configuration
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          packages: ${{ parameters.packages }}
+          users: ${{ parameters.users }}
+
+    - id: create-pull-request
+      name: Create Pull Request
+      action: publish:github:pull-request
+      input:
+        repoUrl: github.com?owner=stuttgart-things&repo=platform-engineering-showcase
+        branchName: backstage/update-ubuntu25-config
+        update: true
+        title: "Update ubuntu25 packer image config"
+        description: |
+          ## Packer Image Config Update (ubuntu25)
+
+          Updated via Backstage software template.
+
+          ### Packages
+          {%- for pkg in parameters.packages %}
+          - `${{ pkg }}`
+          {%- endfor %}
+
+          ### Users
+          {%- for user in parameters.users %}
+          - `${{ user.name }}`
+          {%- endfor %}
+        targetPath: harvester/packer/ubuntu25
+
+  output:
+    links:
+      - title: Pull Request
+        icon: github
+        url: ${{ steps['create-pull-request'].output.remoteUrl }}
+    text:
+      - title: Next Steps
+        content: |
+          PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
+          The packer build pipeline will trigger automatically.
+          On success, the PR will be auto-merged.

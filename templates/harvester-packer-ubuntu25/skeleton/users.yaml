@@ -1,0 +1,9 @@
+users:
+{%- for user in values.users %}
+  - name: ${{ user.name }}
+    groups: ${{ user.groups }}
+    shell: ${{ user.shell }}
+    sudo: "${{ user.sudo }}" # pragma: allowlist secret
+    ssh_authorized_keys:
+      - ${{ user.ssh_key }} # pragma: allowlist secret
+{%- endfor %}
