@@ -1,7 +1,7 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: harvester-packer-ubuntu25
+  name: harvester-packer-devimage
   title: Update Harvester Packer Image (ubuntu25)
   description: Modify packages and users for the ubuntu25 packer image and create a PR to trigger the build pipeline
   tags:
@@ -42,12 +42,12 @@ spec:
             - name: sthings
               groups: sudo
               shell: /bin/bash
-              sudo: "ALL=(ALL) NOPASSWD:ALL"
+              sudo: "ALL=(ALL) NOPASSWD:ALL"  # pragma: allowlist secret
               ssh_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOoe/pqEulMLsJRxBqgbDtdOftsCHq9K2hU1Xr99FQZA sthings@sthings-air12"
             - name: dev
               groups: sudo
               shell: /bin/bash
-              sudo: "ALL=(ALL) NOPASSWD:ALL"
+              sudo: "ALL=(ALL) NOPASSWD:ALL"  # pragma: allowlist secret
               ssh_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOoe/pqEulMLsJRxBqgbDtdOftsCHq9K2hU1Xr99FQZA sthings@sthings-air12"
           items:
             type: object

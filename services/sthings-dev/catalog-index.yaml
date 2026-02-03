@@ -41,3 +41,13 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/golang-service/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: harvester-packer-templates
+  description: Harvester Packer software templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/harvester-packer-devimage/template.yaml
