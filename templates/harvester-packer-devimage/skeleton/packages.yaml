@@ -1,5 +1,10 @@
 ---
 packages:
-{%- for pkg in values.packages %}
+{%- if values.existingPackages %}
+{%- for pkg in values.existingPackages %}
+  - ${{ pkg }}
+{%- endfor %}
+{%- endif %}
+{%- for pkg in values.newPackages %}
   - ${{ pkg }}
 {%- endfor %}

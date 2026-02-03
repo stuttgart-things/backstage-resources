@@ -3,7 +3,7 @@ kind: Template
 metadata:
   name: harvester-packer-devimage
   title: Update Harvester Packer Image (ubuntu25)
-  description: Modify packages and users for the ubuntu25 packer image and create a PR to trigger the build pipeline
+  description: Add packages and users to the ubuntu25 packer image and create a PR to trigger the build pipeline
   tags:
     - harvester
     - packer
@@ -13,12 +13,12 @@ spec:
   type: service
 
   parameters:
-    - title: Users
+    - title: Additional Users
       properties:
         users:
-          title: Users
+          title: Additional Users
           type: array
-          description: Add additional users to create in the image
+          description: New users to add to the image (existing users are preserved)
           default: []
           items:
             type: object
@@ -38,7 +38,7 @@ spec:
               sudo:
                 title: Sudo rule
                 type: string
-                default: "ALL=(ALL) NOPASSWD:ALL"
+                default: "ALL=(ALL) NOPASSWD:ALL" # pragma: allowlist secret
               ssh_key:
                 title: SSH Public Key
                 type: string
@@ -48,18 +48,13 @@ spec:
             orderable: false
             removable: true
 
-    - title: Packages
+    - title: Additional Packages
       properties:
         packages:
-          title: Packages
+          title: Additional Packages
           type: array
-          description: List of packages to install in the image
-          default:
-            - qemu-guest-agent
-            - vim
-            - curl
-            - git
-            - jq
+          description: New packages to add to the image (existing packages are preserved)
+          default: []
           items:
             type: string
           ui:options:
@@ -68,14 +63,35 @@ spec:
             removable: true
 
   steps:
+    - id: fetch-existing
+      name: Fetch Existing Configuration
+      action: fetch:plain
+      input:
+        url: https://github.com/stuttgart-things/platform-engineering-showcase/tree/main/harvester/packer/ubuntu25
+        targetPath: existing
+
+    - id: parse-existing-packages
+      name: Parse Existing Packages
+      action: utils:yaml:parse
+      input:
+        filePath: existing/packages.yaml
+
+    - id: parse-existing-users
+      name: Parse Existing Users
+      action: utils:yaml:parse
+      input:
+        filePath: existing/users.yaml
+
     - id: fetch-base
       name: Render Configuration
       action: fetch:template
       input:
         url: ./skeleton
         values:
-          packages: ${{ parameters.packages }}
-          users: ${{ parameters.users }}
+          existingPackages: ${{ steps['parse-existing-packages'].output.content.packages }}
+          existingUsers: ${{ steps['parse-existing-users'].output.content.users }}
+          newPackages: ${{ parameters.packages }}
+          newUsers: ${{ parameters.users }}
 
     - id: create-pull-request
       name: Create Pull Request
@@ -90,15 +106,21 @@ spec:
 
           Updated via Backstage software template.
 
-          ### Packages
+          ### New Packages Added
           {%- for pkg in parameters.packages %}
           - `${{ pkg }}`
           {%- endfor %}
+          {%- if not parameters.packages %}
+          _None_
+          {%- endif %}
 
-          ### Users
+          ### New Users Added
           {%- for user in parameters.users %}
           - `${{ user.name }}`
           {%- endfor %}
+          {%- if not parameters.users %}
+          _None_
+          {%- endif %}
         targetPath: harvester/packer/ubuntu25
 
   output:

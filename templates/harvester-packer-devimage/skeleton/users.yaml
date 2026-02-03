@@ -1,5 +1,17 @@
 users:
-{%- for user in values.users %}
+{%- if values.existingUsers %}
+{%- for user in values.existingUsers %}
+  - name: ${{ user.name }}
+    groups: ${{ user.groups }}
+    shell: ${{ user.shell }}
+    sudo: "${{ user.sudo }}" # pragma: allowlist secret
+    ssh_authorized_keys:
+{%- for key in user.ssh_authorized_keys %}
+      - ${{ key }} # pragma: allowlist secret
+{%- endfor %}
+{%- endfor %}
+{%- endif %}
+{%- for user in values.newUsers %}
   - name: ${{ user.name }}
     groups: ${{ user.groups }}
     shell: ${{ user.shell }}
