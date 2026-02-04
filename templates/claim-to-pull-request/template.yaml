@@ -33,9 +33,9 @@ spec:
         resourceName:
           title: Resource Name
           type: string
-          default: test-claim
           description: Name for your claim resource
           pattern: '^[a-z0-9-]+$'
+          minLength: 3
 
         category:
           title: Category
@@ -71,7 +71,7 @@ spec:
       input:
         template: ${{ parameters.claimTemplate }}
         parameters: ${{ parameters.parameters }}
-        outputPath: claims/${{ parameters.category }}/${{ parameters.resourceName }}
+        outputPath: .
 
     - id: log-manifest
       name: Show Rendered Manifest
@@ -90,7 +90,7 @@ spec:
       action: fetch:template:file
       input:
         url: ./template/catalog-info.yaml
-        targetPath: claims/${{ parameters.category }}/${{ parameters.resourceName }}/catalog-info.yaml
+        targetPath: ./catalog-info.yaml
         values:
           claimTemplate: ${{ parameters.claimTemplate }}
           resourceName: ${{ parameters.resourceName }}
@@ -132,7 +132,7 @@ spec:
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/claims/${{ parameters.category }}/${{ parameters.resourceName }}/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/claim-${{ parameters.claimTemplate }}-${{ parameters.resourceName }}/claims/${{ parameters.category }}/${{ parameters.resourceName }}/catalog-info.yaml
         optional: true
 
   output:
@@ -143,12 +143,6 @@ spec:
       - title: Open in Catalog
         icon: catalog
         entityRef: ${{ steps['register'].output.entityRef }}
-      - title: Rendered Manifest
-        icon: description
-        content: |
-          ```yaml
-          ${{ steps['render'].output.manifest }}
-          ```
     text:
       - title: Pull Request Created
         content: |
@@ -156,10 +150,22 @@ spec:
           ${{ steps['create-pull-request'].output.remoteUrl }}
 
           Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.resourceName }}`
+      - title: Rendered Manifest
+        content: |
+          ```yaml
+          ${{ steps['render'].output.manifest }}
+          ```
+      - title: Catalog Component Preview
+        content: |
+          The following catalog entity will be registered once the PR is merged:
+          - **Name**: ${{ parameters.resourceName }}
+          - **Type**: crossplane-claim
+          - **Category**: ${{ parameters.category }}
+          - **Template**: ${{ parameters.claimTemplate }}
       - title: File Location
-        content: The manifest will be saved to `claims/${{ parameters.category }}/${{ parameters.resourceName }}/${{ steps['render'].output.filePath }}`
+        content: The manifest will be saved to `claims/${{ parameters.category }}/${{ parameters.resourceName }}/`
       - title: Next Steps
         content: |
           1. Review the pull request in GitHub
           2. Merge the PR to add the claim to the repository
-          3. Apply the manifest to your cluster: `kubectl apply -f claims/${{ parameters.category }}/${{ parameters.resourceName }}/${{ steps['render'].output.filePath }}`
+          3. The catalog component will be available after merge at: `component:default/${{ parameters.resourceName }}`
