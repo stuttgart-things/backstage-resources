@@ -142,7 +142,7 @@ spec:
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/backstage/update-ubuntu-config/packer/ubuntu/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/catalog-info.yaml
         optional: true
 
   output:
@@ -160,9 +160,43 @@ spec:
           The packer build pipeline will trigger automatically.
           On success, the PR will be auto-merged.
       - title: Catalog Resource Preview
-        content: |
-          The following catalog entity will be registered:
-          - **Name**: ubuntu25-packer-image
-          - **Type**: packer-image
-          - **Added Users**: ${{ parameters.users | map(attribute='name') | join(', ') if parameters.users else 'None' }}
-          - **Added Packages**: ${{ parameters.packages | join(', ') if parameters.packages else 'None' }}
+        content: | #pragma: allowlist secret
+          ## Catalog Entity
+
+          | Field | Value |
+          |-------|-------|
+          | **Name** | ubuntu25-packer-image |
+          | **Kind** | Resource |
+          | **Type** | packer-image |
+          | **Lifecycle** | production |
+          | **Owner** | platform-team |
+          | **Base Image** | ${{ parameters.baseImage }} |
+
+          ## Users
+
+          ${{ 'No new users added.' if not parameters.users else '' }}
+          {%- for user in parameters.users %}
+          ### ${{ user.name }}
+
+          | Setting | Value |
+          |---------|-------|
+          | **Groups** | ${{ user.groups or 'sudo' }} |
+          | **Shell** | ${{ user.shell or '/bin/bash' }} |
+          | **Sudo** | ${{ user.sudo or 'ALL=(ALL) NOPASSWD:ALL' }} | # pragma: allowlist secret
+          | **SSH Keys** | ${{ user.ssh_authorized_keys | length }} key(s) |
+          {%- for key in user.ssh_authorized_keys %}
+          - `${{ key[:50] }}...`
+          {%- endfor %}
+
+          {%- endfor %}
+
+          ## Packages
+
+          ${{ 'No new packages added.' if not parameters.packages else '' }}
+          {%- if parameters.packages %}
+          | # | Package |
+          |---|---------|
+          {%- for pkg in parameters.packages %}
+          | ${{ loop.index }} | `${{ pkg }}` |
+          {%- endfor %}
+          {%- endif %}
