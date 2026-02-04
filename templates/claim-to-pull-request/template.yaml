@@ -19,7 +19,8 @@ spec:
     - title: Basic Info
       required:
         - claimTemplate
-        - claimName
+        - resourceName
+        - category
       properties:
         claimTemplate:
           title: Claim Template
@@ -29,18 +30,27 @@ spec:
           ui:options:
             allowArbitraryValues: false
 
-        claimName:
-          title: Claim Name
+        resourceName:
+          title: Resource Name
           type: string
           default: test-claim
           description: Name for your claim resource
           pattern: '^[a-z0-9-]+$'
 
+        category:
+          title: Category
+          type: string
+          description: Category for the claim resource
+          enum:
+            - infra
+            - apps
+            - other-resources
+
         prTitlePreview:
           title: Pull Request Title (preview)
           type: string
           ui:readonly: true
-          default: "Add <claimTemplate> claim - <claimName>"
+          default: "Add <claimTemplate> claim - <resourceName>"
           description: |
             The pull request title will be automatically generated as:
             "Add <template> claim - <name>"
@@ -61,7 +71,7 @@ spec:
       input:
         template: ${{ parameters.claimTemplate }}
         parameters: ${{ parameters.parameters }}
-        outputPath: claims
+        outputPath: claims/${{ parameters.category }}/${{ parameters.resourceName }}
 
     - id: log-manifest
       name: Show Rendered Manifest
@@ -80,24 +90,26 @@ spec:
       action: fetch:template:file
       input:
         url: ./template/catalog-info.yaml
-        targetPath: claims/${{ parameters.claimName }}/catalog-info.yaml
+        targetPath: claims/${{ parameters.category }}/${{ parameters.resourceName }}/catalog-info.yaml
         values:
           claimTemplate: ${{ parameters.claimTemplate }}
-          claimName: ${{ parameters.claimName }}
+          resourceName: ${{ parameters.resourceName }}
+          category: ${{ parameters.category }}
 
     - id: create-pull-request
       name: Create GitHub Pull Request
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}
+        branchName: claim-${{ parameters.claimTemplate }}-${{ parameters.resourceName }}
         update: true
-        title: Add ${{ parameters.claimTemplate }} claim - ${{ parameters.claimName }}
+        title: Add ${{ parameters.claimTemplate }} claim - ${{ parameters.resourceName }}
         description: |
           ## Claim Manifest Created via Backstage
 
           **Template**: ${{ parameters.claimTemplate }}
-          **Claim Name**: ${{ parameters.claimName }}
+          **Resource Name**: ${{ parameters.resourceName }}
+          **Category**: ${{ parameters.category }}
 
           ### Manifest Details
           ```yaml
@@ -105,7 +117,7 @@ spec:
           ```
 
           Created automatically via Backstage Claim Machinery integration.
-        targetPath: claims
+        targetPath: claims/${{ parameters.category }}/${{ parameters.resourceName }}
 
     - id: log-summary
       name: Summary
@@ -113,14 +125,14 @@ spec:
       input:
         message: |
           Template: ${{ parameters.claimTemplate }}
-          Manifest saved to: claims/${{ steps['render'].output.filePath }}
+          Manifest saved to: claims/${{ parameters.category }}/${{ parameters.resourceName }}/${{ steps['render'].output.filePath }}
           Pull Request created successfully!
 
     - id: register
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/claims/${{ parameters.claimName }}/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/claims/${{ parameters.category }}/${{ parameters.resourceName }}/catalog-info.yaml
         optional: true
 
   output:
@@ -143,11 +155,11 @@ spec:
           A pull request has been created at:
           ${{ steps['create-pull-request'].output.remoteUrl }}
 
-          Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}`
+          Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.resourceName }}`
       - title: File Location
-        content: The manifest will be saved to `claims/${{ steps['render'].output.filePath }}`
+        content: The manifest will be saved to `claims/${{ parameters.category }}/${{ parameters.resourceName }}/${{ steps['render'].output.filePath }}`
       - title: Next Steps
         content: |
           1. Review the pull request in GitHub
           2. Merge the PR to add the claim to the repository
-          3. Apply the manifest to your cluster: `kubectl apply -f claims/${{ steps['render'].output.filePath }}`
+          3. Apply the manifest to your cluster: `kubectl apply -f claims/${{ parameters.category }}/${{ parameters.resourceName }}/${{ steps['render'].output.filePath }}`
