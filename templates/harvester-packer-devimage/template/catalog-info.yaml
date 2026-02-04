@@ -5,7 +5,7 @@ metadata:
   name: ubuntu25-packer-image
   description: Ubuntu 25 Packer Image for Harvester
   annotations:
-    github.com/project-slug: stuttgart-things/platform-engineering-showcase
+    github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer

@@ -13,10 +13,10 @@ spec:
   type: service
 
   parameters:
-    - title: Additional Users
+    - title: Add New Users
       properties:
         users:
-          title: Additional Users
+          title: Add New Users
           type: array
           description: New users to add to the image (existing users are preserved)
           default: []
@@ -70,7 +70,7 @@ spec:
       name: Fetch Existing Packages
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu/packages.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/packages.yaml
         targetPath: ./packages.yaml
 
     - id: merge-packages
@@ -86,7 +86,7 @@ spec:
       name: Fetch Existing Users
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu/users.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/users.yaml
         targetPath: ./users.yaml
 
     - id: merge-users
@@ -110,7 +110,7 @@ spec:
       name: Create Pull Request
       action: publish:github:pull-request
       input:
-        repoUrl: github.com?owner=stuttgart-things&repo=platform-engineering-showcase
+        repoUrl: github.com?owner=stuttgart-things&repo=harvester
         branchName: backstage/update-ubuntu-config
         update: true
         title: "Update ubuntu packer image config"
@@ -118,13 +118,13 @@ spec:
           ## Packer Image Config Update (ubuntu)
 
           Updated via Backstage software template.
-        targetPath: harvester/packer/ubuntu
+        targetPath: packer/ubuntu
 
     - id: register
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/catalog-info.yaml
         optional: true
 
   output:
