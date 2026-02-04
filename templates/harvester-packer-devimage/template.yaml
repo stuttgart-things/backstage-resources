@@ -2,7 +2,7 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: harvester-packer-devimage
-  title: Create Harvester VM-Temlate
+  title: Create Harvester VM-Template
   description: Add packages and users to the ubuntu packer image and create a PR to trigger the build pipeline
   tags:
     - harvester
