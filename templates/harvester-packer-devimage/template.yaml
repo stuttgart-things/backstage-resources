@@ -104,7 +104,9 @@ spec:
       input:
         url: ./template/catalog-info.yaml
         targetPath: ./catalog-info.yaml
-        values: {}
+        values:
+          users: ${{ parameters.users }}
+          packages: ${{ parameters.packages }}
 
     - id: create-pull-request
       name: Create Pull Request
@@ -118,6 +120,12 @@ spec:
           ## Packer Image Config Update (ubuntu)
 
           Updated via Backstage software template.
+
+          ### Added Users
+          ${{ parameters.users | map(attribute='name') | join(', ') if parameters.users else 'None' }}
+
+          ### Added Packages
+          ${{ parameters.packages | join(', ') if parameters.packages else 'None' }}
         targetPath: packer/ubuntu
 
     - id: register

@@ -54,27 +54,6 @@ spec:
           description: Parameters specific to the selected template
           ui:field: ClaimMachineryParameters
 
-    - title: GitHub Target
-      required:
-        - repoUrl
-        - targetPath
-      properties:
-        repoUrl:
-          title: Repository
-          type: string
-          ui:field: RepoUrlPicker
-          ui:options:
-            allowedHosts:
-              - github.com
-            allowedOwners:
-              - stuttgart-things
-
-        targetPath:
-          title: Target Path in Repository
-          type: string
-          description: Path where the manifest will be stored
-          default: claims
-
   steps:
     - id: render
       name: Render Claim
@@ -82,7 +61,7 @@ spec:
       input:
         template: ${{ parameters.claimTemplate }}
         parameters: ${{ parameters.parameters }}
-        outputPath: ${{ parameters.targetPath }}
+        outputPath: claims
 
     - id: log-manifest
       name: Show Rendered Manifest
@@ -96,11 +75,21 @@ spec:
           Manifest content:
           ${{ steps['render'].output.manifest }}
 
+    - id: render-catalog
+      name: Render Catalog Info
+      action: fetch:template:file
+      input:
+        url: ./template/catalog-info.yaml
+        targetPath: claims/${{ parameters.claimName }}/catalog-info.yaml
+        values:
+          claimTemplate: ${{ parameters.claimTemplate }}
+          claimName: ${{ parameters.claimName }}
+
     - id: create-pull-request
       name: Create GitHub Pull Request
       action: publish:github:pull-request
       input:
-        repoUrl: ${{ parameters.repoUrl }}
+        repoUrl: github.com?owner=stuttgart-things&repo=harvester
         branchName: claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}
         update: true
         title: Add ${{ parameters.claimTemplate }} claim - ${{ parameters.claimName }}
@@ -116,7 +105,7 @@ spec:
           ```
 
           Created automatically via Backstage Claim Machinery integration.
-        targetPath: ${{ parameters.targetPath }}
+        targetPath: claims
 
     - id: log-summary
       name: Summary
@@ -124,14 +113,24 @@ spec:
       input:
         message: |
           Template: ${{ parameters.claimTemplate }}
-          Manifest saved to: ${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}
+          Manifest saved to: claims/${{ steps['render'].output.filePath }}
           Pull Request created successfully!
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/claims/${{ parameters.claimName }}/catalog-info.yaml
+        optional: true
 
   output:
     links:
       - title: GitHub Pull Request
         icon: github
         url: ${{ steps['create-pull-request'].output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
       - title: Rendered Manifest
         icon: description
         content: |
@@ -146,9 +145,9 @@ spec:
 
           Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.claimName }}`
       - title: File Location
-        content: The manifest will be saved to `${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}`
+        content: The manifest will be saved to `claims/${{ steps['render'].output.filePath }}`
       - title: Next Steps
         content: |
           1. Review the pull request in GitHub
           2. Merge the PR to add the claim to the repository
-          3. Apply the manifest to your cluster: `kubectl apply -f ${{ parameters.targetPath }}/${{ steps['render'].output.filePath }}`
+          3. Apply the manifest to your cluster: `kubectl apply -f claims/${{ steps['render'].output.filePath }}`
