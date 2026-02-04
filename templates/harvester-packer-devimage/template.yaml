@@ -22,7 +22,7 @@ spec:
           default: []
           items:
             type: object
-            required: [name, ssh_key]
+            required: [name, ssh_authorized_keys]
             properties:
               name:
                 title: Username
@@ -39,10 +39,13 @@ spec:
                 title: Sudo rule
                 type: string
                 default: "ALL=(ALL) NOPASSWD:ALL" # pragma: allowlist secret
-              ssh_key:
-                title: SSH Public Key
-                type: string
-                description: SSH public key for authorized access
+              ssh_authorized_keys:
+                title: SSH Public Keys
+                type: array
+                description: SSH public keys for authorized access
+                items:
+                  type: string
+                minItems: 1
           ui:options:
             addable: true
             orderable: false
@@ -63,35 +66,45 @@ spec:
             removable: true
 
   steps:
-    - id: fetch-existing
-      name: Fetch Existing Configuration
-      action: fetch:plain
+    - id: fetch-existing-packages
+      name: Fetch Existing Packages
+      action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/platform-engineering-showcase/tree/main/harvester/packer/ubuntu25
-        targetPath: existing
+        url: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu25/packages.yaml
+        targetPath: ./packages.yaml
 
-    - id: parse-existing-packages
-      name: Parse Existing Packages
-      action: utils:yaml:parse
+    - id: merge-packages
+      name: Merge New Packages
+      action: roadiehq:utils:merge
       input:
-        filePath: existing/packages.yaml
+        path: ./packages.yaml
+        mergeArrays: true
+        content:
+          packages: ${{ parameters.packages }}
 
-    - id: parse-existing-users
-      name: Parse Existing Users
-      action: utils:yaml:parse
+    - id: fetch-existing-users
+      name: Fetch Existing Users
+      action: fetch:plain:file
       input:
-        filePath: existing/users.yaml
+        url: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu25/users.yaml
+        targetPath: ./users.yaml
 
-    - id: fetch-base
-      name: Render Configuration
-      action: fetch:template
+    - id: merge-users
+      name: Merge New Users
+      action: roadiehq:utils:merge
       input:
-        url: ./skeleton
-        values:
-          existingPackages: ${{ steps['parse-existing-packages'].output.content.packages }}
-          existingUsers: ${{ steps['parse-existing-users'].output.content.users }}
-          newPackages: ${{ parameters.packages }}
-          newUsers: ${{ parameters.users }}
+        path: ./users.yaml
+        mergeArrays: true
+        content:
+          users: ${{ parameters.users }}
+
+    - id: render-catalog
+      name: Render Catalog Info
+      action: fetch:template:file
+      input:
+        url: ./template/catalog-info.yaml
+        targetPath: ./catalog-info.yaml
+        values: {}
 
     - id: create-pull-request
       name: Create Pull Request
@@ -105,29 +118,23 @@ spec:
           ## Packer Image Config Update (ubuntu25)
 
           Updated via Backstage software template.
-
-          ### New Packages Added
-          {%- for pkg in parameters.packages %}
-          - `${{ pkg }}`
-          {%- endfor %}
-          {%- if not parameters.packages %}
-          _None_
-          {%- endif %}
-
-          ### New Users Added
-          {%- for user in parameters.users %}
-          - `${{ user.name }}`
-          {%- endfor %}
-          {%- if not parameters.users %}
-          _None_
-          {%- endif %}
         targetPath: harvester/packer/ubuntu25
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        catalogInfoUrl: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu25/catalog-info.yaml
+        optional: true
 
   output:
     links:
       - title: Pull Request
         icon: github
         url: ${{ steps['create-pull-request'].output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
     text:
       - title: Next Steps
         content: |
