@@ -1,0 +1,18 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.claimName }}
+  description: Crossplane claim (${{ values.claimTemplate }}) - ${{ values.claimName }}
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/source-location: url:https://github.com/stuttgart-things/harvester/tree/main/claims
+    claim-machinery/template: ${{ values.claimTemplate }}
+  tags:
+    - crossplane
+    - claim
+    - ${{ values.claimTemplate }}
+spec:
+  type: crossplane-claim
+  lifecycle: production
+  owner: platform-team
