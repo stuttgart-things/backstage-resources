@@ -132,7 +132,7 @@ spec:
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/backstage/update-ubuntu-config/packer/ubuntu/catalog-info.yaml
         optional: true
 
   output:
@@ -149,3 +149,10 @@ spec:
           PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
           The packer build pipeline will trigger automatically.
           On success, the PR will be auto-merged.
+      - title: Catalog Resource Preview
+        content: |
+          The following catalog entity will be registered:
+          - **Name**: ubuntu25-packer-image
+          - **Type**: packer-image
+          - **Added Users**: ${{ parameters.users | map(attribute='name') | join(', ') if parameters.users else 'None' }}
+          - **Added Packages**: ${{ parameters.packages | join(', ') if parameters.packages else 'None' }}
