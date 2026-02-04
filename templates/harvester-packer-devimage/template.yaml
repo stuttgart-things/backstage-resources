@@ -2,7 +2,7 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: harvester-packer-devimage
-  title: Create Harvester Packer Image (ubuntu)
+  title: Create Harvester VM-Temlate
   description: Add packages and users to the ubuntu packer image and create a PR to trigger the build pipeline
   tags:
     - harvester
@@ -13,6 +13,16 @@ spec:
   type: service
 
   parameters:
+    - title: Base Image
+      properties:
+        baseImage:
+          title: Base Image
+          type: string
+          description: Select the base image for the packer build
+          enum:
+            - ubuntu
+          default: ubuntu
+
     - title: Add New Users
       properties:
         users:
