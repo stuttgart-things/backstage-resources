@@ -2,8 +2,8 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: harvester-packer-devimage
-  title: Update Harvester Packer Image (ubuntu25)
-  description: Add packages and users to the ubuntu25 packer image and create a PR to trigger the build pipeline
+  title: Create Harvester Packer Image (ubuntu)
+  description: Add packages and users to the ubuntu packer image and create a PR to trigger the build pipeline
   tags:
     - harvester
     - packer
@@ -70,7 +70,7 @@ spec:
       name: Fetch Existing Packages
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu25/packages.yaml
+        url: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu/packages.yaml
         targetPath: ./packages.yaml
 
     - id: merge-packages
@@ -86,7 +86,7 @@ spec:
       name: Fetch Existing Users
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu25/users.yaml
+        url: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu/users.yaml
         targetPath: ./users.yaml
 
     - id: merge-users
@@ -111,20 +111,20 @@ spec:
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=platform-engineering-showcase
-        branchName: backstage/update-ubuntu25-config
+        branchName: backstage/update-ubuntu-config
         update: true
-        title: "Update ubuntu25 packer image config"
+        title: "Update ubuntu packer image config"
         description: |
-          ## Packer Image Config Update (ubuntu25)
+          ## Packer Image Config Update (ubuntu)
 
           Updated via Backstage software template.
-        targetPath: harvester/packer/ubuntu25
+        targetPath: harvester/packer/ubuntu
 
     - id: register
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu25/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/platform-engineering-showcase/blob/main/harvester/packer/ubuntu/catalog-info.yaml
         optional: true
 
   output:
