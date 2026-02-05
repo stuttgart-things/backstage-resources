@@ -113,13 +113,22 @@ spec:
         url: https://github.com/stuttgart-things/harvester/blob/main/claims/${{ parameters.category }}/kustomization.yaml
         targetPath: ./kustomization.yaml
 
+    - id: fix-empty-resources
+      name: Fix Empty Resources Array
+      action: roadiehq:utils:fs:replace
+      input:
+        files:
+          - file: ./kustomization.yaml
+            find: 'resources: []'
+            replaceWith: 'resources:'
+
     - id: update-parent-kustomization
       name: Update Parent Kustomization
       action: roadiehq:utils:fs:append
       input:
         path: ./kustomization.yaml
-        content: |2
-            - ${{ parameters.resourceName }}
+        content: |
+          - ${{ parameters.resourceName }}
 
     - id: create-pull-request
       name: Create GitHub Pull Request
