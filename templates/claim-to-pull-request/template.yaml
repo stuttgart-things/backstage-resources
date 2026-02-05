@@ -127,8 +127,7 @@ spec:
       action: roadiehq:utils:fs:append
       input:
         path: ./kustomization.yaml
-        content: |
-          - ${{ parameters.resourceName }}
+        content: "  - ${{ parameters.resourceName }}\n"
 
     - id: create-pull-request
       name: Create GitHub Pull Request
