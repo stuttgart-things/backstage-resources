@@ -110,7 +110,7 @@ spec:
       name: Fetch Parent Kustomization
       action: fetch:plain:file
       input:
-        url: https://raw.githubusercontent.com/stuttgart-things/harvester/main/claims/${{ parameters.category }}/kustomization.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/claims/${{ parameters.category }}/kustomization.yaml
         targetPath: ./kustomization.yaml
 
     - id: update-parent-kustomization
