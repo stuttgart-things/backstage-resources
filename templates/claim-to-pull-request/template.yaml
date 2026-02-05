@@ -72,7 +72,7 @@ spec:
         template: ${{ parameters.claimTemplate }}
         parameters: ${{ parameters.parameters }}
         nameOverride: ${{ parameters.resourceName }}
-        outputPath: .
+        outputPath: ${{ parameters.resourceName }}
 
     - id: log-manifest
       name: Show Rendered Manifest
@@ -91,7 +91,7 @@ spec:
       action: fetch:template:file
       input:
         url: ./template/catalog-info.yaml
-        targetPath: ./catalog-info.yaml
+        targetPath: ./${{ parameters.resourceName }}/catalog-info.yaml
         values:
           claimTemplate: ${{ parameters.claimTemplate }}
           resourceName: ${{ parameters.resourceName }}
@@ -102,7 +102,7 @@ spec:
       action: fetch:template:file
       input:
         url: ./template/kustomization.yaml
-        targetPath: ./kustomization.yaml
+        targetPath: ./${{ parameters.resourceName }}/kustomization.yaml
         values:
           claimTemplate: ${{ parameters.claimTemplate }}
 
@@ -110,14 +110,14 @@ spec:
       name: Fetch Parent Kustomization
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/claims/${{ parameters.category }}/kustomization.yaml
-        targetPath: ../kustomization.yaml
+        url: https://raw.githubusercontent.com/stuttgart-things/harvester/main/claims/${{ parameters.category }}/kustomization.yaml
+        targetPath: ./kustomization.yaml
 
     - id: update-parent-kustomization
       name: Update Parent Kustomization
       action: roadiehq:utils:fs:append
       input:
-        path: ../kustomization.yaml
+        path: ./kustomization.yaml
         content: |2
             - ${{ parameters.resourceName }}
 
@@ -142,7 +142,7 @@ spec:
           ```
 
           Created automatically via Backstage Claim Machinery integration.
-        targetPath: claims/${{ parameters.category }}/${{ parameters.resourceName }}
+        targetPath: claims/${{ parameters.category }}
 
     - id: log-summary
       name: Summary
