@@ -132,10 +132,10 @@ spec:
           Updated via Backstage software template.
 
           ### Added Users
-          ${{ parameters.users | map(attribute='name') | join(', ') if parameters.users else 'None' }}
+          ${{ (parameters.users | map('name') | join(', ')) or 'None' }}
 
           ### Added Packages
-          ${{ parameters.packages | join(', ') if parameters.packages else 'None' }}
+          ${{ (parameters.packages | join(', ')) or 'None' }}
         targetPath: packer/ubuntu
 
     - id: register
