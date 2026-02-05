@@ -24,11 +24,14 @@ spec:
           default: ubuntu
 
     - title: Add New Users
+      description: |
+        [View existing users](https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/users.yaml)
       properties:
         users:
           title: Add New Users
           type: array
           description: New users to add to the image (existing users are preserved)
+          ui:help: "View current users: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/users.yaml"
           default: []
           items:
             type: object
@@ -62,11 +65,14 @@ spec:
             removable: true
 
     - title: Additional Packages
+      description: |
+        [View existing packages](https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/packages.yaml)
       properties:
         packages:
           title: Additional Packages
           type: array
           description: New packages to add to the image (existing packages are preserved)
+          ui:help: "View current packages: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/packages.yaml"
           default: []
           items:
             type: string
@@ -98,33 +104,23 @@ spec:
       action: fetch:plain:file
       input:
         url: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/users.yaml
-        targetPath: ./users.yaml
+        targetPath: ./users-existing.yaml
 
-    - id: render-users-additions
-      name: Render Users with Pragma Comments
-      if: ${{ parameters.users | length > 0 }}
+    - id: parse-existing-users
+      name: Parse Existing Users
+      action: utils:yaml:parse
+      input:
+        filePath: ./users-existing.yaml
+
+    - id: render-users
+      name: Render Complete Users File
       action: fetch:template:file
       input:
         url: ./template/users-additions.yaml
-        targetPath: ./users-additions.yaml
+        targetPath: ./users.yaml
         values:
-          users: ${{ parameters.users }}
-
-    - id: parse-users-additions
-      name: Parse Rendered Users
-      if: ${{ parameters.users | length > 0 }}
-      action: utils:yaml:parse
-      input:
-        filePath: ./users-additions.yaml
-
-    - id: merge-users
-      name: Merge New Users
-      if: ${{ parameters.users | length > 0 }}
-      action: roadiehq:utils:merge
-      input:
-        path: ./users.yaml
-        mergeArrays: true
-        content: ${{ steps['parse-users-additions'].output.content }}
+          existingUsers: ${{ steps['parse-existing-users'].output.content.users | default([]) }}
+          newUsers: ${{ parameters.users | default([]) }}
 
     - id: render-catalog
       name: Render Catalog Info
@@ -149,11 +145,7 @@ spec:
 
           Updated via Backstage software template.
 
-          ### Added Users
-          ${{ (parameters.users | map(attribute='name') | join(', ')) or 'None' }}
-
-          ### Added Packages
-          ${{ (parameters.packages | join(', ')) or 'None' }}
+          Review the changes in the files tab.
         targetPath: packer/ubuntu
 
     - id: register

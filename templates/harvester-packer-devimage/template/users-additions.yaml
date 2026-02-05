@@ -1,6 +1,5 @@
-{%- if values.users and values.users | length > 0 %}
 users:
-{%- for user in values.users %}
+{%- for user in values.existingUsers %}
   - name: ${{ user.name }}
     groups: ${{ user.groups | default('sudo') }}
     shell: ${{ user.shell | default('/bin/bash') }}
@@ -10,6 +9,13 @@ users:
       - ${{ key }} # pragma: allowlist secret
 {%- endfor %}
 {%- endfor %}
-{%- else %}
-users: []
-{%- endif %}
+{%- for user in values.newUsers %}
+  - name: ${{ user.name }}
+    groups: ${{ user.groups | default('sudo') }}
+    shell: ${{ user.shell | default('/bin/bash') }}
+    sudo: ${{ user.sudo | default('ALL=(ALL) NOPASSWD:ALL') }} # pragma: allowlist secret
+    ssh_authorized_keys:
+{%- for key in user.ssh_authorized_keys %}
+      - ${{ key }} # pragma: allowlist secret
+{%- endfor %}
+{%- endfor %}
