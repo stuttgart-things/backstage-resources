@@ -150,7 +150,7 @@ spec:
           Updated via Backstage software template.
 
           ### Added Users
-          ${{ (parameters.users | map('name') | join(', ')) or 'None' }}
+          ${{ (parameters.users | map(attribute='name') | join(', ')) or 'None' }}
 
           ### Added Packages
           ${{ (parameters.packages | join(', ')) or 'None' }}
