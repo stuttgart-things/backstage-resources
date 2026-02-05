@@ -1,0 +1,11 @@
+users:
+{%- for user in values.users %}
+  - name: ${{ user.name }}
+    groups: ${{ user.groups | default('sudo') }}
+    shell: ${{ user.shell | default('/bin/bash') }}
+    sudo: ${{ user.sudo | default('ALL=(ALL) NOPASSWD:ALL') }}
+    ssh_authorized_keys:
+{%- for key in user.ssh_authorized_keys %}
+      - ${{ key }} # pragma: allowlist secret
+{%- endfor %}
+{%- endfor %}

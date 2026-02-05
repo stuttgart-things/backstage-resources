@@ -99,14 +99,28 @@ spec:
         url: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/users.yaml
         targetPath: ./users.yaml
 
+    - id: render-users-additions
+      name: Render Users with Pragma Comments
+      action: fetch:template:file
+      input:
+        url: ./template/users-additions.yaml
+        targetPath: ./users-additions.yaml
+        values:
+          users: ${{ parameters.users }}
+
+    - id: parse-users-additions
+      name: Parse Rendered Users
+      action: utils:yaml:parse
+      input:
+        filePath: ./users-additions.yaml
+
     - id: merge-users
       name: Merge New Users
       action: roadiehq:utils:merge
       input:
         path: ./users.yaml
         mergeArrays: true
-        content:
-          users: ${{ parameters.users }}
+        content: ${{ steps['parse-users-additions'].output.content }}
 
     - id: render-catalog
       name: Render Catalog Info
