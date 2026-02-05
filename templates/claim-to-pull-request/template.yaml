@@ -71,6 +71,7 @@ spec:
       input:
         template: ${{ parameters.claimTemplate }}
         parameters: ${{ parameters.parameters }}
+        nameOverride: ${{ parameters.resourceName }}
         outputPath: .
 
     - id: log-manifest
@@ -95,6 +96,15 @@ spec:
           claimTemplate: ${{ parameters.claimTemplate }}
           resourceName: ${{ parameters.resourceName }}
           category: ${{ parameters.category }}
+
+    - id: render-kustomization
+      name: Render Kustomization
+      action: fetch:template:file
+      input:
+        url: ./template/kustomization.yaml
+        targetPath: ./kustomization.yaml
+        values:
+          claimTemplate: ${{ parameters.claimTemplate }}
 
     - id: create-pull-request
       name: Create GitHub Pull Request
