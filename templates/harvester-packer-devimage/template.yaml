@@ -85,6 +85,7 @@ spec:
 
     - id: merge-packages
       name: Merge New Packages
+      if: ${{ parameters.packages | length > 0 }}
       action: roadiehq:utils:merge
       input:
         path: ./packages.yaml
@@ -101,6 +102,7 @@ spec:
 
     - id: render-users-additions
       name: Render Users with Pragma Comments
+      if: ${{ parameters.users | length > 0 }}
       action: fetch:template:file
       input:
         url: ./template/users-additions.yaml
@@ -110,12 +112,14 @@ spec:
 
     - id: parse-users-additions
       name: Parse Rendered Users
+      if: ${{ parameters.users | length > 0 }}
       action: utils:yaml:parse
       input:
         filePath: ./users-additions.yaml
 
     - id: merge-users
       name: Merge New Users
+      if: ${{ parameters.users | length > 0 }}
       action: roadiehq:utils:merge
       input:
         path: ./users.yaml
