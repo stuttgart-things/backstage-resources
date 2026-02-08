@@ -1,0 +1,77 @@
+---
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: delete-claim-pull-request
+  title: Delete Resource Claim
+  description: Create a GitHub Pull Request to delete a claim from the registry
+  tags:
+    - crossplane
+    - kubernetes
+    - infrastructure
+    - gitops
+    - claims
+    - delete
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Select Claim to Delete
+      required:
+        - claimToDelete
+      properties:
+        claimToDelete:
+          title: Claim to Delete
+          type: string
+          description: Select an active claim from the registry to delete
+          ui:field: RegistryClaimPicker
+          ui:options:
+            status: active
+
+        prTitlePreview:
+          title: Pull Request Title (preview)
+          type: string
+          ui:readonly: true
+          default: "Delete claim - <claimName>"
+          description: |
+            The pull request title will be automatically generated as:
+            "Delete claim - <name>"
+
+  steps:
+    - id: delete-claim
+      name: Create Delete PR
+      action: claim-registry:delete
+      input:
+        claimData: ${{ parameters.claimToDelete }}
+        targetBranch: main
+
+    - id: log-summary
+      name: Summary
+      action: debug:log
+      input:
+        message: |
+          Claim deletion PR created successfully!
+
+          Claim: ${{ parameters.claimToDelete }}
+          Pull Request: ${{ steps['delete-claim'].output.pullRequestUrl }}
+          PR Number: #${{ steps['delete-claim'].output.pullRequestNumber }}
+
+  output:
+    links:
+      - title: GitHub Pull Request
+        icon: github
+        url: ${{ steps['delete-claim'].output.pullRequestUrl }}
+    text:
+      - title: Pull Request Created
+        content: |
+          A pull request has been created to delete the selected claim:
+          ${{ steps['delete-claim'].output.pullRequestUrl }}
+
+          PR #${{ steps['delete-claim'].output.pullRequestNumber }}
+      - title: Next Steps
+        content: |
+          1. Review the pull request in GitHub
+          2. Verify that the correct claim files are removed
+          3. Check that the parent kustomization.yaml is updated
+          4. Merge the PR to complete the deletion
