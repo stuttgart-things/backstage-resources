@@ -26,6 +26,16 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
+  name: delete-claim-pull-request-templates
+  description: Delete Claim Pull Request software templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/delete-claim-pull-request/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
   name: terraform-vm-dagger-template-apply
   description: Terraform and Dagger software templates apply
 spec:
