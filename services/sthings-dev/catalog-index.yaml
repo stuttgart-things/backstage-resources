@@ -67,11 +67,11 @@ apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
   name: ansible-provisioning-templates
-  description: Go Service software templates
+  description: Ansible provisioning templates
 spec:
   type: url
   targets:
-    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates//home/sthings/projects/stuttgart-things/backstage/templates/ansible-provisioning/template.yaml
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/ansible-provisioning/template.yaml
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Location
