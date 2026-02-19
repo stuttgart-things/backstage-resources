@@ -1,0 +1,355 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: packer-vsphere
+  title: Packer vSphere VM Template Builder
+  description: Creates Packer configuration for building vSphere VM templates with support for LabDA and LabUL datacenters
+  tags:
+    - packer
+    - vsphere
+    - vm-template
+    - infrastructure
+    - labda
+    - labul
+
+spec:
+  owner: team-infrastructure
+  type: service
+
+  parameters:
+    - title: OS & Template Configuration
+      required:
+        - os_version
+        - iso_url
+        - iso_checksum
+        - vm_template_name
+      properties:
+        os_version:
+          title: OS Version
+          type: string
+          description: Ubuntu OS version
+          enum:
+            - ubuntu24
+            - ubuntu25
+          default: ubuntu25
+        os_codename:
+          title: Ubuntu Codename
+          type: string
+          description: Ubuntu release codename
+          enum:
+            - noble
+            - plucky
+          default: plucky
+        iso_url:
+          title: ISO URL
+          type: string
+          description: ISO download URL
+          default: "https://releases.ubuntu.com/plucky/ubuntu-25.04-live-server-amd64.iso"
+        iso_checksum:
+          title: ISO Checksum
+          type: string
+          description: ISO SHA256 checksum
+          default: "8b44046211118639c673335a80359f4b3f0d9e52c33fe61c59072b1b61bdecc5"
+        vm_template_name:
+          title: VM Template Name
+          type: string
+          description: VM template name prefix (e.g. ubuntu25-base)
+          default: "ubuntu25-base"
+        packer_version:
+          title: Minimum Packer Version
+          type: string
+          description: Required minimum packer version
+          default: ">= 1.12.0"
+
+    - title: VM Resources
+      properties:
+        vm_cpus:
+          title: VM CPUs
+          type: number
+          description: Number of vCPUs
+          default: 8
+        vm_ram:
+          title: VM RAM (MB)
+          type: number
+          description: Memory in megabytes
+          default: 8192
+        vm_disk_size:
+          title: Disk Size (MB)
+          type: number
+          description: Disk size in megabytes
+          default: 15360
+
+    - title: Lab Environment
+      required:
+        - lab
+      properties:
+        lab:
+          title: Target Lab
+          type: string
+          description: Select the target lab environment
+          enum:
+            - LabUL
+            - LabDA
+          default: LabUL
+      dependencies:
+        lab:
+          oneOf:
+            - properties:
+                lab:
+                  enum:
+                    - LabUL
+                labul_cluster:
+                  title: vSphere Cluster
+                  type: string
+                  default: "/LabUL/host/Cluster-V6.5"
+                  description: Path to the cluster
+                labul_datacenter:
+                  title: vSphere Datacenter
+                  type: string
+                  default: "/LabUL"
+                  description: Path to the datacenter
+                labul_datastore:
+                  title: vSphere Datastore
+                  type: string
+                  description: Path to the datastore
+                  default: "/LabUL/datastore/UL-ESX-SAS-01"
+                  enum:
+                    - "/LabUL/datastore/UL-V5010-01-LUN3"
+                    - "/LabUL/datastore/UL-ESX-SAS-01"
+                    - "/LabUL/datastore/UL-ESX-SAS-02"
+                    - "/LabUL/datastore/UL-ESX-NVME-01"
+                labul_host:
+                  title: vSphere Host
+                  type: string
+                  default: "/LabUL/host/Cluster-V6.5/10.31.101.41"
+                  description: Path to the ESXi host
+                labul_network:
+                  title: vSphere Network
+                  type: string
+                  description: Path to the network
+                  default: "/LabUL/network/LAB-10.31.102"
+                  enum:
+                    - "/LabUL/network/MGMT-10.31.101"
+                    - "/LabUL/network/LAB-10.31.102"
+                    - "/LabUL/network/LAB-10.31.103"
+                    - "/LabUL/network/LAB-10.31.104"
+                labul_vcenter_server:
+                  title: vCenter Server
+                  type: string
+                  default: "10.31.101.51"
+                  description: vCenter server address
+
+            - properties:
+                lab:
+                  enum:
+                    - LabDA
+                labda_cluster:
+                  title: vSphere Cluster
+                  type: string
+                  default: "/NetApp-HCI-Datacenter/host/NetApp-HCI-Cluster-01"
+                  description: Path to the cluster
+                labda_datacenter:
+                  title: vSphere Datacenter
+                  type: string
+                  default: "/NetApp-HCI-Datacenter"
+                  description: Path to the datacenter
+                labda_datastore:
+                  title: vSphere Datastore
+                  type: string
+                  description: Path to the datastore
+                  default: "hciesx02-local-datastore-01"
+                  enum:
+                    - "hciesx02-local-datastore-01"
+                    - "/NetApp-HCI-Datacenter/datastore/DatastoreCluster/NetApp-HCI-Datastore-01"
+                    - "/NetApp-HCI-Datacenter/datastore/DatastoreCluster/NetApp-HCI-Datastore-02"
+                labda_host:
+                  title: vSphere Host
+                  type: string
+                  default: "/NetApp-HCI-Datacenter/host/NetApp-HCI-Cluster-01/10.100.135.44/"
+                  description: Path to the ESXi host
+                labda_network:
+                  title: vSphere Network
+                  type: string
+                  description: Path to the network
+                  default: "/NetApp-HCI-Datacenter/host/NetApp-HCI-Cluster-01/10.100.135.44/tiab-prod"
+                  enum:
+                    - "/NetApp-HCI-Datacenter/host/NetApp-HCI-Cluster-01/10.100.135.44/tiab-prod"
+                    - "/NetApp-HCI-Datacenter/network/tiab-prod"
+                    - "/NetApp-HCI-Datacenter/network/tiab-dev"
+                    - "/NetApp-HCI-Datacenter/network/tiab-test"
+                labda_vcenter_server:
+                  title: vCenter Server
+                  type: string
+                  default: "10.100.135.50"
+                  description: vCenter server address
+
+    - title: Provisioning Type
+      required:
+        - provisioning_type
+      properties:
+        provisioning_type:
+          title: Provisioning Type
+          type: string
+          description: Select the type of VM template provisioning
+          enum:
+            - baseos
+            - rke2-node
+          enumNames:
+            - Base OS Setup
+            - RKE2 Node Template
+          default: baseos
+      dependencies:
+        provisioning_type:
+          oneOf:
+            - properties:
+                provisioning_type:
+                  enum:
+                    - baseos
+
+            - properties:
+                provisioning_type:
+                  enum:
+                    - rke2-node
+
+    - title: Ansible Collections
+      properties:
+        ansible_collections:
+          title: Ansible Collections
+          type: array
+          description: Select the Ansible collections to include
+          uniqueItems: true
+          ui:widget: checkboxes
+          items:
+            type: string
+            enum:
+              - ansible.netcommon:8.4.0
+              - ansible.posix:2.1.0
+              - awx.awx:24.6.1
+              - community.crypto:3.1.1
+              - community.docker:5.0.6
+              - community.general:12.3.0
+              - community.hashi_vault:7.1.0
+              - community.vmware:6.2.0
+              - kubernetes.core:6.3.0
+            enumNames:
+              - ansible.netcommon (8.4.0)
+              - ansible.posix (2.1.0)
+              - awx.awx (24.6.1)
+              - community.crypto (3.1.1)
+              - community.docker (5.0.6)
+              - community.general (12.3.0)
+              - community.hashi_vault (7.1.0)
+              - community.vmware (6.2.0)
+              - kubernetes.core (6.3.0)
+          default:
+            - ansible.netcommon:8.4.0
+            - ansible.posix:2.1.0
+            - awx.awx:24.6.1
+            - community.crypto:3.1.1
+            - community.docker:5.0.6
+            - community.general:12.3.0
+            - community.hashi_vault:7.1.0
+            - community.vmware:6.2.0
+            - kubernetes.core:6.3.0
+        sthings_collections:
+          title: Stuttgart-Things Collections
+          type: array
+          description: Select the Stuttgart-Things Ansible collections to include
+          uniqueItems: true
+          ui:widget: checkboxes
+          items:
+            type: string
+            enum:
+              - https://github.com/stuttgart-things/ansible/releases/download/sthings-baseos-26.3.1155.tar.gz/sthings-baseos-26.3.1155.tar.gz
+              - https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.4.469.tar.gz/sthings-container-26.4.469.tar.gz
+              - https://github.com/stuttgart-things/ansible/releases/download/sthings-rke-26.1.554.tar.gz/sthings-rke-26.1.554.tar.gz
+            enumNames:
+              - sthings-baseos (26.3.1155)
+              - sthings-container (26.4.469)
+              - sthings-rke (26.1.554)
+          default:
+            - https://github.com/stuttgart-things/ansible/releases/download/sthings-baseos-26.3.1155.tar.gz/sthings-baseos-26.3.1155.tar.gz
+            - https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.4.469.tar.gz/sthings-container-26.4.469.tar.gz
+            - https://github.com/stuttgart-things/ansible/releases/download/sthings-rke-26.1.554.tar.gz/sthings-rke-26.1.554.tar.gz
+
+  steps:
+    - id: fetch-template
+      name: Render Packer Build Files
+      action: fetch:template
+      input:
+        url: ./content
+        values:
+          os_version: ${{ parameters.os_version }}
+          os_codename: ${{ parameters.os_codename }}
+          iso_url: ${{ parameters.iso_url }}
+          iso_checksum: ${{ parameters.iso_checksum }}
+          vm_template_name: ${{ parameters.vm_template_name }}
+          packer_version: ${{ parameters.packer_version }}
+          vm_cpus: ${{ parameters.vm_cpus }}
+          vm_ram: ${{ parameters.vm_ram }}
+          vm_disk_size: ${{ parameters.vm_disk_size }}
+          lab: ${{ parameters.lab }}
+          labul_cluster: ${{ parameters.labul_cluster }}
+          labul_datacenter: ${{ parameters.labul_datacenter }}
+          labul_datastore: ${{ parameters.labul_datastore }}
+          labul_host: ${{ parameters.labul_host }}
+          labul_network: ${{ parameters.labul_network }}
+          labul_vcenter_server: ${{ parameters.labul_vcenter_server }}
+          labda_cluster: ${{ parameters.labda_cluster }}
+          labda_datacenter: ${{ parameters.labda_datacenter }}
+          labda_datastore: ${{ parameters.labda_datastore }}
+          labda_host: ${{ parameters.labda_host }}
+          labda_network: ${{ parameters.labda_network }}
+          labda_vcenter_server: ${{ parameters.labda_vcenter_server }}
+          provisioning_type: ${{ parameters.provisioning_type }}
+          ansible_collections: ${{ parameters.ansible_collections }}
+          sthings_collections: ${{ parameters.sthings_collections }}
+
+    - id: publish-pr
+      name: Create Pull Request
+      action: publish:github:pull-request
+      input:
+        repoUrl: github.com?owner=stuttgart-things&repo=stuttgart-things
+        branchName: packer-${{ parameters.vm_template_name }}-${{ parameters.lab | lower }}-vsphere-${{ parameters.provisioning_type }}
+        title: "Add Packer Build: ${{ parameters.vm_template_name }}-${{ parameters.lab | lower }}-vsphere-${{ parameters.provisioning_type }}"
+        description: |
+          This PR adds Packer vSphere build configuration for a VM template.
+
+          **Build Configuration:**
+          - OS: ${{ parameters.os_version }} (${{ parameters.os_codename }})
+          - Template Name: ${{ parameters.vm_template_name }}
+          - Lab: ${{ parameters.lab }}
+          - Provisioning: ${{ parameters.provisioning_type }}
+          - CPUs: ${{ parameters.vm_cpus }}
+          - RAM: ${{ parameters.vm_ram }} MB
+          - Disk: ${{ parameters.vm_disk_size }} MB
+
+          Generated by Backstage Software Template.
+        targetPath: packer/builds/${{ parameters.vm_template_name }}-${{ parameters.lab | lower }}-vsphere-${{ parameters.provisioning_type }}
+
+  output:
+    links:
+      - title: View Pull Request
+        icon: github
+        url: ${{ steps['publish-pr'].output.remoteUrl }}
+    text:
+      - title: Build Created
+        content: |
+          **Packer Build Configuration Created**
+
+          - Template: ${{ parameters.vm_template_name }}
+          - Lab: ${{ parameters.lab }}
+          - Provisioning: ${{ parameters.provisioning_type }}
+
+          Build with:
+          ```bash
+          dagger call -m github.com/stuttgart-things/dagger/packer bake \
+            --local-dir <path> \
+            --build-path ${{ parameters.vm_template_name }}.pkr.hcl \
+            --packer-version 1.13.1 \
+            --vault-addr $VAULT_ADDR \
+            --vault-token env:VAULT_TOKEN \
+            --vault-role-id env:VAULT_ROLE_ID \
+            --vault-secret-id env:VAULT_SECRET_ID \
+            --progress plain -vv
+          ```

@@ -1,0 +1,9 @@
+---
+collections:
+{%- for collection in values.ansible_collections %}
+  - name: ${{ collection.split(':') | first }}
+    version: ${{ collection.split(':') | last }}
+{%- endfor %}
+{%- for collection in values.sthings_collections %}
+  - name: ${{ collection }}
+{%- endfor %}

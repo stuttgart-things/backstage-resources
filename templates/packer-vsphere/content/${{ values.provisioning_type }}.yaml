@@ -1,0 +1,222 @@
+{%- if values.provisioning_type == "baseos" %}
+# ${{ values.provisioning_type }}.yaml
+- name: Provision ${{ values.os_version }} base image
+  hosts: default
+  become: true
+  vars:
+    update_os: true
+    install_requirements: true
+    create_user: true
+    copy_network_config: true
+    reboot_prio_provisioning: false
+    admin_group: sudo
+{%- if values.lab == "LabUL" %}
+    vault_instances:
+      - https://vault.tiab.labda.sva.de:8200
+      - https://vault.labul.sva.de:8200
+      - https://vault-vsphere.labul.sva.de:8200
+      - https://vault-vsphere.tiab.labda.sva.de:8200
+{%- elif values.lab == "LabDA" %}
+    vault_instances:
+      - https://vault.tiab.labda.sva.de:8200
+      - https://vault-vsphere.tiab.labda.sva.de:8200
+{%- endif %}
+    vault_approle_id: "{{ '{{' }} lookup('env', 'VAULT_ROLE_ID') {{ '}}' }}"
+    vault_approle_secret: "{{ '{{' }} lookup('env', 'VAULT_SECRET_ID') {{ '}}' }}"
+    vault_url: "{{ '{{' }} lookup('env', 'VAULT_ADDR') {{ '}}' }}"
+
+    os_packages:
+      - python3-pip
+      - vim
+      - curl
+      - git
+      - unzip
+      - zip
+      - tmux
+
+    ubuntu_network_config: |
+      network:
+        ethernets:
+{%- if values.os_version == "ubuntu25" %}
+          ens192:
+{%- else %}
+          ens18:
+{%- endif %}
+            dhcp4: true
+            dhcp-identifier: mac
+        version: 2
+    path_ubuntu_network_config: /etc/netplan/00-installer-config.yaml
+
+    groups_to_create:
+      - name: sthings
+        gid: 3000
+
+    users:
+      - username: sthings
+        name: sthings user
+        uid: 1112
+        home: /home/sthings
+        groups: ["sudo", "sthings"]
+        password: "{{ '{{' }} lookup('community.hashi_vault.hashi_vault', 'secret=ssh/data/sthings:password validate_certs=false auth_method=approle role_id={{ '{{' }} vault_approle_id {{ '}}' }} secret_id={{ '{{' }} vault_approle_secret {{ '}}' }} url={{ '{{' }} vault_url {{ '}}' }}') {{ '}}' }}"
+        ssh_key:
+          - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCslDwiVO/EvWLVVY1Twpc7Lhr9laLPgu+iiOuvMEg8E4hnEDHRPZpdD6YnnJYsLnVHbi8Y3EPDQ2UDbHnfgeYPa94XHdhGSCsIX+tA5+PLFSFgoyCtA5oWc3vrm58RX6DQXf7fPytwxIESPjIgEDv2BTOEc+pk0S09e3jttmFsrKzB7tOutB3FktcLnxGD75JgBa9/i0zmfcchF2VNZcgZRXJ5JiMGKhaKB7qZ6AoMQlDmCvllLSdCxGIxu/quiBcGhaJBMmpkSTeRouU1YWg05wEjyg47DwJyyEMzvYe6LIHxN3zBXMTBzUKJC1thGNC9yaFeywrz+iaIk66RGcjL sthings"
+
+  pre_tasks:
+    - name: Remove existing apt locks
+      block:
+        - name: Remove apt lists lock
+          ansible.builtin.file:
+            path: /var/lib/apt/lists/lock
+            state: absent
+        - name: Remove apt archives lock
+          ansible.builtin.file:
+            path: /var/cache/apt/archives/lock
+            state: absent
+        - name: Update apt cache
+          ansible.builtin.apt:
+            update_cache: yes
+      when: ansible_distribution == 'Ubuntu'
+
+  roles:
+    - role: sthings.baseos.install_requirements
+      when: install_requirements|bool
+    - role: sthings.baseos.create_os_user
+      when: create_user|bool
+
+  post_tasks:
+    - name: Install Vault CA certificates
+      ansible.builtin.include_role:
+        name: sthings.baseos.install_configure_vault
+        tasks_from: install-ca-auth
+      vars:
+        vault_url: "{{ '{{' }} vault_instance {{ '}}' }}"
+      loop: "{{ '{{' }} vault_instances {{ '}}' }}"
+      loop_control:
+        loop_var: vault_instance
+
+    - name: Apply network configuration
+      ansible.builtin.copy:
+        content: "{{ '{{' }} ubuntu_network_config {{ '}}' }}"
+        dest: "{{ '{{' }} path_ubuntu_network_config {{ '}}' }}"
+      when: copy_network_config|bool
+{%- elif values.provisioning_type == "rke2-node" %}
+# ${{ values.provisioning_type }}.yaml
+- name: Provision ${{ values.os_version }} RKE2 node template
+  hosts: default
+  become: true
+  vars:
+    update_os: true
+    install_requirements: true
+    create_user: true
+    copy_network_config: true
+    reboot_prio_provisioning: false
+    cloudinit: true
+    configure_rke_node: true
+    template_creation_setup: true
+    admin_group: "{{ '{{' }} 'wheel' if ansible_os_family == 'RedHat' else 'sudo' {{ '}}' }}"
+{%- if values.lab == "LabUL" %}
+    vault_instances:
+      - https://vault.tiab.labda.sva.de:8200
+      - https://vault.labul.sva.de:8200
+      - https://vault-vsphere.labul.sva.de:8200
+      - https://vault-vsphere.tiab.labda.sva.de:8200
+{%- elif values.lab == "LabDA" %}
+    vault_instances:
+      - https://vault.tiab.labda.sva.de:8200
+      - https://vault-vsphere.tiab.labda.sva.de:8200
+{%- endif %}
+    vault_approle_id: "{{ '{{' }} lookup('env', 'VAULT_ROLE_ID') {{ '}}' }}"
+    vault_approle_secret: "{{ '{{' }} lookup('env', 'VAULT_SECRET_ID') {{ '}}' }}"
+    vault_url: "{{ '{{' }} lookup('env', 'VAULT_ADDR') {{ '}}' }}"
+
+    os_packages:
+      - python3-pip
+      - vim
+      - curl
+      - git
+      - unzip
+      - zip
+      - tmux
+
+    ubuntu_network_config: |
+      network:
+        ethernets:
+{%- if values.os_version == "ubuntu25" %}
+          ens192:
+{%- else %}
+          ens18:
+{%- endif %}
+            dhcp4: true
+            dhcp-identifier: mac
+        version: 2
+{%- if values.os_version != "ubuntu25" %}
+        renderer: NetworkManager
+{%- endif %}
+    path_ubuntu_network_config: /etc/netplan/00-installer-config.yaml
+
+    groups_to_create:
+      - name: sthings
+        gid: 3000
+
+    users:
+      - username: sthings
+        name: sthings user
+        uid: 1112
+        home: /home/sthings
+        groups: ["{{ '{{' }} admin_group {{ '}}' }}", "sthings"]
+        password: "{{ '{{' }} lookup('community.hashi_vault.hashi_vault', 'secret=ssh/data/sthings:password validate_certs=false auth_method=approle role_id={{ '{{' }} vault_approle_id {{ '}}' }} secret_id={{ '{{' }} vault_approle_secret {{ '}}' }} url={{ '{{' }} vault_url {{ '}}' }}') {{ '}}' }}"
+        ssh_key:
+          - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCslDwiVO/EvWLVVY1Twpc7Lhr9laLPgu+iiOuvMEg8E4hnEDHRPZpdD6YnnJYsLnVHbi8Y3EPDQ2UDbHnfgeYPa94XHdhGSCsIX+tA5+PLFSFgoyCtA5oWc3vrm58RX6DQXf7fPytwxIESPjIgEDv2BTOEc+pk0S09e3jttmFsrKzB7tOutB3FktcLnxGD75JgBa9/i0zmfcchF2VNZcgZRXJ5JiMGKhaKB7qZ6AoMQlDmCvllLSdCxGIxu/quiBcGhaJBMmpkSTeRouU1YWg05wEjyg47DwJyyEMzvYe6LIHxN3zBXMTBzUKJC1thGNC9yaFeywrz+iaIk66RGcjL sthings"
+
+  pre_tasks:
+    - name: Create pip config dir
+      ansible.builtin.file:
+        path: /root/.config/pip/
+        state: directory
+
+    - name: Create pip config
+      ansible.builtin.copy:
+        dest: /root/.config/pip/pip.conf
+        content: |
+          [global]
+          break-system-packages = true
+
+    - name: Remove existing apt locks
+      block:
+        - name: Remove apt lists
+          ansible.builtin.shell: |
+            sudo rm -rf /var/lib/apt/lists/*
+            sudo apt-get clean
+            sudo apt-get update
+
+        - name: Update apt cache
+          ansible.builtin.apt:
+            update_cache: yes
+      when: ansible_distribution == 'Ubuntu'
+
+  roles:
+    - role: sthings.baseos.install_requirements
+      when: install_requirements|bool
+    - role: sthings.baseos.create_os_user
+      when: create_user|bool
+    - role: sthings.rke.configure_rke_node
+      when: configure_rke_node|bool
+
+  post_tasks:
+    - name: Install Vault CA certificates
+      ansible.builtin.include_role:
+        name: sthings.baseos.install_configure_vault
+        tasks_from: install-ca-auth
+      vars:
+        vault_url: "{{ '{{' }} vault_instance {{ '}}' }}"
+      loop: "{{ '{{' }} vault_instances {{ '}}' }}"
+      loop_control:
+        loop_var: vault_instance
+      when: vault_instances is defined
+
+    - name: Apply network configuration
+      ansible.builtin.copy:
+        content: "{{ '{{' }} ubuntu_network_config {{ '}}' }}"
+        dest: "{{ '{{' }} path_ubuntu_network_config {{ '}}' }}"
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu' and copy_network_config|bool
+{%- endif %}
