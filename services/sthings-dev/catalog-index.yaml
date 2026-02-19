@@ -82,3 +82,13 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/harvester-packer-devimage/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: packer-vsphere-templates
+  description: Packer vSphere VM template builder
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/packer-vsphere/template.yaml
