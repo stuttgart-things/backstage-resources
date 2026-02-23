@@ -2,8 +2,8 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: ubuntu25-packer-image
-  description: Ubuntu 25 Packer Image for Harvester
+  name: ${{ values.baseImage }}-packer-image
+  description: ${{ values.baseImage }} Packer Image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:

@@ -21,6 +21,10 @@ spec:
           description: Select the base image for the packer build
           enum:
             - ubuntu
+            - ubuntu25
+          enumNames:
+            - Ubuntu 22.04 (Jammy)
+            - Ubuntu 25.04 (Plucky)
           default: ubuntu
 
     - title: Add New Users
@@ -86,7 +90,7 @@ spec:
       name: Fetch Existing Packages
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/packages.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/packages.yaml
         targetPath: ./packages.yaml
 
     - id: merge-packages
@@ -103,7 +107,7 @@ spec:
       name: Fetch Existing Users
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/users.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/users.yaml
         targetPath: ./users-existing.yaml
 
     - id: parse-existing-users
@@ -131,28 +135,29 @@ spec:
         values:
           users: ${{ parameters.users }}
           packages: ${{ parameters.packages }}
+          baseImage: ${{ parameters.baseImage }}
 
     - id: create-pull-request
       name: Create Pull Request
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: backstage/update-ubuntu-config
+        branchName: backstage/update-${{ parameters.baseImage }}-config
         update: true
-        title: "Update ubuntu packer image config"
+        title: "Update ${{ parameters.baseImage }} packer image config"
         description: |
-          ## Packer Image Config Update (ubuntu)
+          ## Packer Image Config Update (${{ parameters.baseImage }})
 
           Updated via Backstage software template.
 
           Review the changes in the files tab.
-        targetPath: packer/ubuntu
+        targetPath: packer/${{ parameters.baseImage }}
 
     - id: register
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/catalog-info.yaml
         optional: true
 
   output:
@@ -175,7 +180,7 @@ spec:
 
           | Field | Value |
           |-------|-------|
-          | **Name** | ubuntu25-packer-image |
+          | **Name** | ${{ parameters.baseImage }}-packer-image |
           | **Kind** | Resource |
           | **Type** | packer-image |
           | **Lifecycle** | production |
