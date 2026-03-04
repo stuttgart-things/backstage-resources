@@ -30,11 +30,45 @@ spec:
             - 🦎 openSUSE Leap 15.6
             - 🪨 Rocky Linux 9
           default: ubuntu22
-        targetName:
-          title: Target Name
-          type: string
-          description: Name for the VM template on Harvester (e.g. u22-dev, u25-dev)
-          default: u22-dev
+      dependencies:
+        baseImage:
+          oneOf:
+            - properties:
+                baseImage:
+                  enum:
+                    - ubuntu22
+                targetName:
+                  title: Target Name
+                  type: string
+                  description: Name for the VM template on Harvester
+                  default: u22-dev
+            - properties:
+                baseImage:
+                  enum:
+                    - ubuntu25
+                targetName:
+                  title: Target Name
+                  type: string
+                  description: Name for the VM template on Harvester
+                  default: u25-dev
+            - properties:
+                baseImage:
+                  enum:
+                    - opensuse-leap
+                targetName:
+                  title: Target Name
+                  type: string
+                  description: Name for the VM template on Harvester
+                  default: suse-dev
+            - properties:
+                baseImage:
+                  enum:
+                    - rocky
+                targetName:
+                  title: Target Name
+                  type: string
+                  description: Name for the VM template on Harvester
+                  default: rocky-dev
 
     - title: Add New Users
       description: |
