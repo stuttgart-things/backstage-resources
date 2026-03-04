@@ -28,7 +28,7 @@ spec:
             - 🟠 Ubuntu 22.04 (Jammy)
             - 🟠 Ubuntu 25.04 (Plucky)
             - 🦎 openSUSE Leap 15.6
-            - 🪨 Rocky Linux 9
+            - 🪨 Rocky Linux 9.7
           default: ubuntu22
       dependencies:
         baseImage:
