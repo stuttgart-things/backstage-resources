@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-catalog-config
+  namespace: portal
+data:
+  app-config.catalog.yaml: |
+    catalog:
+      locations:
+        - type: url
+          target: https://github.com/stuttgart-things/backstage-resources/blob/main/org/sthings-dev/org.yaml
+          rules:
+            - allow: [User, Group]
+        - type: url
+          target: https://github.com/stuttgart-things/backstage-resources/blob/main/services/sthings-dev/catalog-index.yaml
+          rules:
+            - allow: [Component, Location, System, API, Resource, Template]

@@ -1,0 +1,32 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: backstage
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/backstage
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      BACKSTAGE_NAMESPACE: portal
+      BACKSTAGE_VERSION: "2.6.3"
+      BACKSTAGE_IMAGE_REGISTRY: ghcr.io
+      BACKSTAGE_IMAGE_REPOSITORY: stuttgart-things/sthings-backstage
+      BACKSTAGE_STORAGE_CLASS: nfs4-csi
+      BACKSTAGE_REPLICAS: "1"
+      BACKSTAGE_APP_TITLE: Stuttgart Things Backstage
+      BACKSTAGE_ORGANIZATION_NAME: stuttgart-things
+      DOMAIN: movie-scripts2.sthings-vsphere.labul.sva.de
+      GATEWAY_NAME: movie-scripts2-gateway
+      GATEWAY_NAMESPACE: default
+    substituteFrom:
+      - kind: Secret
+        name: backstage-secrets-subst

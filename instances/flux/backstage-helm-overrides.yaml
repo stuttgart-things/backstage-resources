@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-helm-overrides
+  namespace: portal
+data:
+  imageTag: "260218.1436"
