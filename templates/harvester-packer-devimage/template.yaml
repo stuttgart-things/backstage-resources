@@ -30,45 +30,10 @@ spec:
             - 🦎 openSUSE Leap 15.6
             - 🪨 Rocky Linux 9.7
           default: ubuntu22
-      dependencies:
-        baseImage:
-          oneOf:
-            - properties:
-                baseImage:
-                  enum:
-                    - ubuntu22
-                targetName:
-                  title: Target Name
-                  type: string
-                  description: Name for the VM template on Harvester
-                  default: u22-dev
-            - properties:
-                baseImage:
-                  enum:
-                    - ubuntu25
-                targetName:
-                  title: Target Name
-                  type: string
-                  description: Name for the VM template on Harvester
-                  default: u25-dev
-            - properties:
-                baseImage:
-                  enum:
-                    - opensuse-leap
-                targetName:
-                  title: Target Name
-                  type: string
-                  description: Name for the VM template on Harvester
-                  default: suse-dev
-            - properties:
-                baseImage:
-                  enum:
-                    - rocky
-                targetName:
-                  title: Target Name
-                  type: string
-                  description: Name for the VM template on Harvester
-                  default: rocky-dev
+        targetNameOverride:
+          title: Target Name Override (optional)
+          type: string
+          description: Leave empty to use the default name (u22-dev, u25-dev, suse15-dev, rocky9-dev)
 
     - title: Add New Users
       description: |
@@ -129,6 +94,20 @@ spec:
             removable: true
 
   steps:
+    - id: resolve-target-name
+      name: Resolve Target Name
+      action: roadiehq:utils:jsonata
+      input:
+        data:
+          baseImage: ${{ parameters.baseImage }}
+          override: ${{ parameters.targetNameOverride }}
+          mapping:
+            ubuntu22: u22-dev
+            ubuntu25: u25-dev
+            opensuse-leap: suse15-dev
+            rocky: rocky9-dev
+        expression: "override != '' ? override : $lookup(mapping, baseImage)"
+
     - id: fetch-existing-packages
       name: Fetch Existing Packages
       action: fetch:plain:file
@@ -179,18 +158,18 @@ spec:
           users: ${{ parameters.users }}
           packages: ${{ parameters.packages }}
           baseImage: ${{ parameters.baseImage }}
-          targetName: ${{ parameters.targetName }}
+          targetName: ${{ steps['resolve-target-name'].output.result }}
 
     - id: create-pull-request
       name: Create Pull Request
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: backstage/update-${{ parameters.targetName }}-config
+        branchName: backstage/update-${{ steps['resolve-target-name'].output.result }}-config
         update: true
-        title: "Update ${{ parameters.targetName }} packer image config"
+        title: "Update ${{ steps['resolve-target-name'].output.result }} packer image config"
         description: |
-          ## Packer Image Config Update (${{ parameters.targetName }})
+          ## Packer Image Config Update (${{ steps['resolve-target-name'].output.result }})
 
           Updated via Backstage software template.
 
@@ -224,7 +203,7 @@ spec:
 
           | Field | Value |
           |-------|-------|
-          | **Name** | ${{ parameters.targetName }}-packer-image |
+          | **Name** | ${{ steps['resolve-target-name'].output.result }}-packer-image |
           | **Kind** | Resource |
           | **Type** | packer-image |
           | **Lifecycle** | production |
