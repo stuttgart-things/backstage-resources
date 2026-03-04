@@ -27,49 +27,49 @@ task run
 
 ## Releases
 
-- Automatisierte Releases über GitHub Actions mit [semantic-release](https://github.com/semantic-release/semantic-release).
-- Konfiguration: `.releaserc.json`, Workflow: `.github/workflows/release.yml`, Changelog: `CHANGELOG.md`.
-- Branches: `main` (Stable), `release/next` (Release-Branch für Changelog-Push).
+- Automated releases via GitHub Actions with [semantic-release](https://github.com/semantic-release/semantic-release).
+- Configuration: `.releaserc.json`, Workflow: `.github/workflows/release.yml`, Changelog: `CHANGELOG.md`.
+- Branches: `main` (Stable), `release/next` (Release branch for changelog push).
 
-### Konventionelle Commits
+### Conventional Commits
 
-Bitte nutze das [Conventional Commits](https://www.conventionalcommits.org/) Format, z. B.:
-- `feat: Neue API für X`
-- `fix: Behebt Speicherleck`
-- `chore: Abhängigkeiten aktualisiert`
+Please use the [Conventional Commits](https://www.conventionalcommits.org/) format, e.g.:
+- `feat: New API for X`
+- `fix: Fix memory leak`
+- `chore: Update dependencies`
 
-### Lokaler Dry-Run (optional)
+### Local Dry-Run (optional)
 
-Falls Node.js installiert ist, kann ein Dry-Run getestet werden:
+If Node.js is installed, you can test with a dry-run:
 
 ```bash
 npx semantic-release --dry-run
 ```
 
-## Branchschutz (empfohlen)
+## Branch Protection (recommended)
 
-Richte Branch-Protection in GitHub ein, um stabile Releases sicherzustellen:
+Set up branch protection in GitHub to ensure stable releases:
 
-- **Geschützte Branches**: `main` und `release/next`
-- **Require pull request reviews before merging**: aktivieren (mind. 1 Review)
-- **Require status checks to pass before merging**: aktivieren und den Workflow `Release` auswählen
-- **Require linear history**: optional aktivieren
-- **Restrict who can push to matching branches**: optional (nur Maintainer)
-- **Dismiss stale pull request approvals when new commits are pushed**: optional aktivieren
+- **Protected branches**: `main` and `release/next`
+- **Require pull request reviews before merging**: enable (at least 1 review)
+- **Require status checks to pass before merging**: enable and select the `Release` workflow
+- **Require linear history**: optionally enable
+- **Restrict who can push to matching branches**: optional (maintainers only)
+- **Dismiss stale pull request approvals when new commits are pushed**: optionally enable
 
-Hinweis: Diese Einstellungen findest du unter
+Note: You can find these settings under
 GitHub → Repository → Settings → Branches → Branch protection rules.
 
 ### Alternative: CLI (gh)
 
-Mit der GitHub CLI kann Branchschutz gesetzt werden (Admin-Rechte erforderlich):
+Branch protection can be set via the GitHub CLI (admin rights required):
 
 ```bash
-# Werte anpassen
+# Adjust values
 OWNER=${{ values.repoOwner }}
 REPO=${{ values.repoName }}
 
-# Schutz für main
+# Protection for main
 gh api -X PUT \
 	repos/$OWNER/$REPO/branches/main/protection \
 	-H "Accept: application/vnd.github+json" \
@@ -80,7 +80,7 @@ gh api -X PUT \
 	-F required_pull_request_reviews.required_approving_review_count=1 \
 	-F restrictions=null
 
-# Schutz für release/next
+# Protection for release/next
 gh api -X PUT \
 	repos/$OWNER/$REPO/branches/release/next/protection \
 	-H "Accept: application/vnd.github+json" \
@@ -92,7 +92,7 @@ gh api -X PUT \
 	-F restrictions=null
 ```
 
-Hinweis: `gh` nutzt deine lokale Authentifizierung (`gh auth login`).
+Note: `gh` uses your local authentication (`gh auth login`).
 
 ## License
 
