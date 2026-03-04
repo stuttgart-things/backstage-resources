@@ -2,14 +2,14 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: ${{ values.baseImage }}-packer-image
-  description: ${{ values.baseImage }} Packer Image for Harvester
+  name: ${{ values.targetName }}-packer-image
+  description: ${{ values.targetName }} Packer Image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
-    - ubuntu
+    - ${{ values.baseImage }}
 {%- if values.users | length > 0 %}
     - users-customized
 {%- endif %}

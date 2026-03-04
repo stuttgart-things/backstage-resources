@@ -3,7 +3,7 @@ kind: Template
 metadata:
   name: harvester-packer-devimage
   title: Create Harvester VM-Template
-  description: Add packages and users to the ubuntu packer image and create a PR to trigger the build pipeline
+  description: Add packages and users to a packer image and create a PR to trigger the build pipeline
   tags:
     - harvester
     - packer
@@ -20,22 +20,31 @@ spec:
           type: string
           description: Select the base image for the packer build
           enum:
-            - ubuntu
+            - ubuntu22
             - ubuntu25
+            - opensuse-leap
+            - rocky
           enumNames:
-            - Ubuntu 22.04 (Jammy)
-            - Ubuntu 25.04 (Plucky)
-          default: ubuntu
+            - 🟠 Ubuntu 22.04 (Jammy)
+            - 🟠 Ubuntu 25.04 (Plucky)
+            - 🦎 openSUSE Leap 15.6
+            - 🪨 Rocky Linux 9
+          default: ubuntu22
+        targetName:
+          title: Target Name
+          type: string
+          description: Name for the VM template on Harvester (e.g. u22-dev, u25-dev)
+          default: u22-dev
 
     - title: Add New Users
       description: |
-        [View existing users](https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/users.yaml)
+        Existing users from the selected base image will be preserved.
       properties:
         users:
           title: Add New Users
           type: array
           description: New users to add to the image (existing users are preserved)
-          ui:help: "View current users: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/users.yaml"
+          ui:help: "View users at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
           default: []
           items:
             type: object
@@ -70,13 +79,13 @@ spec:
 
     - title: Additional Packages
       description: |
-        [View existing packages](https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/packages.yaml)
+        Existing packages from the selected base image will be preserved.
       properties:
         packages:
           title: Additional Packages
           type: array
           description: New packages to add to the image (existing packages are preserved)
-          ui:help: "View current packages: https://github.com/stuttgart-things/harvester/blob/main/packer/ubuntu/packages.yaml"
+          ui:help: "View packages at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
           default: []
           items:
             type: string
@@ -136,17 +145,18 @@ spec:
           users: ${{ parameters.users }}
           packages: ${{ parameters.packages }}
           baseImage: ${{ parameters.baseImage }}
+          targetName: ${{ parameters.targetName }}
 
     - id: create-pull-request
       name: Create Pull Request
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: backstage/update-${{ parameters.baseImage }}-config
+        branchName: backstage/update-${{ parameters.targetName }}-config
         update: true
-        title: "Update ${{ parameters.baseImage }} packer image config"
+        title: "Update ${{ parameters.targetName }} packer image config"
         description: |
-          ## Packer Image Config Update (${{ parameters.baseImage }})
+          ## Packer Image Config Update (${{ parameters.targetName }})
 
           Updated via Backstage software template.
 
@@ -180,7 +190,7 @@ spec:
 
           | Field | Value |
           |-------|-------|
-          | **Name** | ${{ parameters.baseImage }}-packer-image |
+          | **Name** | ${{ parameters.targetName }}-packer-image |
           | **Kind** | Resource |
           | **Type** | packer-image |
           | **Lifecycle** | production |
