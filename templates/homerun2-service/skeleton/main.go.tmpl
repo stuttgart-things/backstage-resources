@@ -104,7 +104,7 @@ func main() {
 	consumerGroup := homerun.GetEnv("CONSUMER_GROUP", "${{ values.fullName }}")
 	consumerName := homerun.GetEnv("CONSUMER_NAME", "")
 
-	c, err := catcher.NewRedisCatcher(redisConfig, consumerGroup, consumerName)
+	c, err := catcher.NewRedisCatcher(redisConfig, consumerGroup, consumerName, catcher.LogHandler())
 	if err != nil {
 		slog.Error("failed to create catcher", "error", err)
 		os.Exit(1)

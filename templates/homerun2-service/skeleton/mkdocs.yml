@@ -1,0 +1,14 @@
+site_name: ${{ values.fullName | capitalize }}
+site_description: ${{ values.description }}
+nav:
+  - Home: index.md
+{%- if values.serviceType == "pitcher" %}
+  - API Usage: api-usage.md
+{%- endif %}
+{%- if values.serviceType == "catcher" %}
+  - Configuration: configuration.md
+{%- endif %}
+  - Deployment: deployment.md
+  - CI/CD: cicd.md
+plugins:
+  - techdocs-core
