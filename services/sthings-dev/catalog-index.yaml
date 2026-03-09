@@ -92,3 +92,13 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/packer-vsphere/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: homerun2-service-templates
+  description: Homerun2 microservice templates (pitcher/catcher)
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/homerun2-service/template.yaml
