@@ -43,7 +43,7 @@ spec:
         serviceName:
           title: Service Name
           type: string
-          description: Name suffix (e.g., core-catcher, omni-pitcher). Repo will be homerun2-<name>.
+          description: "Name suffix WITHOUT homerun2- prefix (e.g., core-catcher, omni-pitcher, k8s-pitcher). Repo will be homerun2-<name>."
           pattern: "^[a-z][a-z0-9-]+$"
 
         serviceType:
