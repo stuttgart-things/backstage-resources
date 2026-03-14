@@ -102,3 +102,13 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/homerun2-service/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: flux-bootstrap-templates
+  description: Flux bootstrap, check, and destroy templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/flux-bootstrap/template.yaml
