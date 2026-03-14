@@ -36,16 +36,40 @@ spec:
 
     - title: Cluster Configuration
       required:
+        - source_repo
         - kube_config
       properties:
-        kube_config:
-          title: Kubeconfig Path
+        source_repo:
+          title: Source Repository
           type: string
-          description: Path to the SOPS-encrypted kubeconfig in the repository
+          description: Repository containing the SOPS-encrypted kubeconfig
           enum:
-            - secrets/infra.sthings.lab.yaml
-          enumNames:
-            - infra.sthings.lab
+            - stuttgart-things/harvester
+            - stuttgart-things/stuttgart-things
+          default: stuttgart-things/harvester
+      dependencies:
+        source_repo:
+          oneOf:
+            - properties:
+                source_repo:
+                  enum:
+                    - stuttgart-things/harvester
+                kube_config:
+                  title: Kubeconfig
+                  type: string
+                  description: SOPS-encrypted kubeconfig in the repository
+                  enum:
+                    - secrets/infra.sthings.lab.yaml
+                  enumNames:
+                    - infra.sthings.lab
+            - properties:
+                source_repo:
+                  enum:
+                    - stuttgart-things/stuttgart-things
+                kube_config:
+                  title: Kubeconfig
+                  type: string
+                  description: SOPS-encrypted kubeconfig in the repository
 
     - title: Bootstrap Configuration
       description: Only required for the bootstrap action
@@ -65,17 +89,17 @@ spec:
                   enum:
                     - bootstrap
                 repository:
-                  title: Repository
+                  title: Target Repository
                   type: string
-                  description: Target repository for Flux config (owner/repo)
-                  default: stuttgart-things/stuttgart-things
+                  description: Repository where Flux config will be committed (owner/repo)
+                  default: stuttgart-things/harvester
                   enum:
-                    - stuttgart-things/stuttgart-things
                     - stuttgart-things/harvester
+                    - stuttgart-things/stuttgart-things
                 destination_path:
                   title: Destination Path
                   type: string
-                  description: Path in the repository for Flux config
+                  description: Path in the target repository for Flux config
                   default: clusters/infra
                 operator_version:
                   title: Flux Operator Version
@@ -97,6 +121,7 @@ spec:
         repoUrl: github.com?repo=stuttgart-things&owner=stuttgart-things
         branchOrTagName: main
         workflowInputs:
+          source-repo: ${{ parameters.source_repo }}
           kube-config: ${{ parameters.kube_config }}
           repository: ${{ parameters.repository }}
           destination-path: ${{ parameters.destination_path }}
@@ -111,6 +136,7 @@ spec:
         repoUrl: github.com?repo=stuttgart-things&owner=stuttgart-things
         branchOrTagName: main
         workflowInputs:
+          source-repo: ${{ parameters.source_repo }}
           kube-config: ${{ parameters.kube_config }}
 
     - id: dispatch-destroy
@@ -122,6 +148,7 @@ spec:
         repoUrl: github.com?repo=stuttgart-things&owner=stuttgart-things
         branchOrTagName: main
         workflowInputs:
+          source-repo: ${{ parameters.source_repo }}
           kube-config: ${{ parameters.kube_config }}
 
   output:
@@ -133,6 +160,7 @@ spec:
       - title: Workflow Dispatched
         content: |
           **Action**: ${{ parameters.action }}
-          **Cluster**: ${{ parameters.kube_config }}
+          **Source Repo**: ${{ parameters.source_repo }}
+          **Kubeconfig**: ${{ parameters.kube_config }}
 
           The workflow has been dispatched. Check GitHub Actions for progress.
