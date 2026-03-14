@@ -1,0 +1,138 @@
+---
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: flux-bootstrap
+  title: Flux Bootstrap / Check / Destroy
+  description: Bootstrap, check, or destroy Flux on a Kubernetes cluster via Dagger
+  tags:
+    - flux
+    - kubernetes
+    - gitops
+    - dagger
+    - infrastructure
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Action
+      required:
+        - action
+      properties:
+        action:
+          title: Action
+          type: string
+          description: Select the operation to perform
+          enum:
+            - bootstrap
+            - check
+            - destroy
+          enumNames:
+            - Bootstrap Flux (deploy operator + config)
+            - Check Flux Status (verify cluster)
+            - Destroy Flux (tear down for re-testing)
+          default: check
+
+    - title: Cluster Configuration
+      required:
+        - kube_config
+      properties:
+        kube_config:
+          title: Kubeconfig Path
+          type: string
+          description: Path to the SOPS-encrypted kubeconfig in the repository
+          enum:
+            - secrets/infra.sthings.lab.yaml
+          enumNames:
+            - infra.sthings.lab
+
+    - title: Bootstrap Configuration
+      description: Only required for the bootstrap action
+      dependencies:
+        action:
+          oneOf:
+            - properties:
+                action:
+                  enum:
+                    - check
+            - properties:
+                action:
+                  enum:
+                    - destroy
+            - properties:
+                action:
+                  enum:
+                    - bootstrap
+                repository:
+                  title: Repository
+                  type: string
+                  description: Target repository for Flux config (owner/repo)
+                  default: stuttgart-things/stuttgart-things
+                  enum:
+                    - stuttgart-things/stuttgart-things
+                    - stuttgart-things/harvester
+                destination_path:
+                  title: Destination Path
+                  type: string
+                  description: Path in the repository for Flux config
+                  default: clusters/infra
+                operator_version:
+                  title: Flux Operator Version
+                  type: string
+                  description: Version of the Flux operator to deploy
+                  default: "0.42.1"
+                  enum:
+                    - "0.42.1"
+                    - "0.41.0"
+                    - "0.40.0"
+
+  steps:
+    - id: dispatch-bootstrap
+      name: Trigger Flux Bootstrap
+      if: ${{ parameters.action === "bootstrap" }}
+      action: github:actions:dispatch
+      input:
+        workflowId: dispatch-flux-bootstrap.yaml
+        repoUrl: github.com?repo=stuttgart-things&owner=stuttgart-things
+        branchOrTagName: main
+        workflowInputs:
+          kube-config: ${{ parameters.kube_config }}
+          repository: ${{ parameters.repository }}
+          destination-path: ${{ parameters.destination_path }}
+          operator-version: ${{ parameters.operator_version }}
+
+    - id: dispatch-check
+      name: Trigger Flux Check
+      if: ${{ parameters.action === "check" }}
+      action: github:actions:dispatch
+      input:
+        workflowId: dispatch-flux-check.yaml
+        repoUrl: github.com?repo=stuttgart-things&owner=stuttgart-things
+        branchOrTagName: main
+        workflowInputs:
+          kube-config: ${{ parameters.kube_config }}
+
+    - id: dispatch-destroy
+      name: Trigger Flux Destroy
+      if: ${{ parameters.action === "destroy" }}
+      action: github:actions:dispatch
+      input:
+        workflowId: dispatch-flux-destroy.yaml
+        repoUrl: github.com?repo=stuttgart-things&owner=stuttgart-things
+        branchOrTagName: main
+        workflowInputs:
+          kube-config: ${{ parameters.kube_config }}
+
+  output:
+    links:
+      - title: View GitHub Actions
+        icon: github
+        url: https://github.com/stuttgart-things/stuttgart-things/actions
+    text:
+      - title: Workflow Dispatched
+        content: |
+          **Action**: ${{ parameters.action }}
+          **Cluster**: ${{ parameters.kube_config }}
+
+          The workflow has been dispatched. Check GitHub Actions for progress.
