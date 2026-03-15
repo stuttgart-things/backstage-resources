@@ -1,4 +1,4 @@
-site_name: ${{ values.fullName | capitalize }}
+site_name: ${{ values.fullName }}
 site_description: ${{ values.description }}
 nav:
   - Home: index.md

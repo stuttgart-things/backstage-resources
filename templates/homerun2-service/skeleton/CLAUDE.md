@@ -6,7 +6,7 @@ ${{ values.fullName }} — ${{ values.description }}
 
 ## Tech Stack
 
-- **Language**: Go 1.24+
+- **Language**: Go 1.25+
 {%- if values.serviceType == "pitcher" %}
 - **HTTP**: stdlib `net/http` (no framework)
 - **Queue**: Redis Streams via `homerun-library`

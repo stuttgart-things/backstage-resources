@@ -23,7 +23,7 @@ import (
 	"${{ values.goModule }}/internal/catcher"
 {%- endif %}
 
-	homerun "github.com/stuttgart-things/homerun-library/v2"
+	homerun "github.com/stuttgart-things/homerun-library/v3"
 )
 
 var (
@@ -101,7 +101,7 @@ func main() {
 {% endif %}
 {% if values.serviceType == "catcher" %}
 	redisConfig := config.LoadRedisConfig()
-	consumerGroup := homerun.GetEnv("CONSUMER_GROUP", "${{ values.fullName }}")
+	consumerGroup := homerun.GetEnv("CONSUMER_GROUP", "${{ values.consumerGroup }}")
 	consumerName := homerun.GetEnv("CONSUMER_NAME", "")
 
 	c, err := catcher.NewRedisCatcher(redisConfig, consumerGroup, consumerName, catcher.LogHandler())

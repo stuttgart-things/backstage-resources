@@ -13,7 +13,7 @@ type PitchResponse struct {
 import (
 	"time"
 
-	homerun "github.com/stuttgart-things/homerun-library/v2"
+	homerun "github.com/stuttgart-things/homerun-library/v3"
 )
 
 // CaughtMessage wraps a homerun.Message with stream metadata.

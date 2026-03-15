@@ -20,7 +20,7 @@ metadata:
 spec:
   type: service
   lifecycle: production
-  owner: platform-team
+  owner: ${{ values.owner }}
   system: homerun2
   dependsOn:
     - resource:redis

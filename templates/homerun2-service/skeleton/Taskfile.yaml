@@ -83,3 +83,40 @@ tasks:
       - |
         dagger call -m github.com/stuttgart-things/dagger/homerun@v0.72.0 \
           run-redis --port {{ .PORT }} --password "{{ .PASSWORD }}" up
+{%- if values.serviceType == "pitcher" %}
+
+  run-local:
+    desc: Run pitcher locally with file backend (no Redis needed)
+    vars:
+      PORT: '{{ "{{" }} .PORT | default "8080" {{ "}}" }}'
+    env:
+      PITCHER_MODE: file
+      AUTH_TOKEN: local-dev-token
+      PORT: "{{ "{{" }} .PORT {{ "}}" }}"
+      LOG_FORMAT: text
+    cmds:
+      - go run .
+{%- endif %}
+{%- if values.serviceType == "catcher" %}
+
+  run-local:
+    desc: Run catcher locally with file backend (no Redis needed)
+    env:
+      CATCHER_MODE: log
+      CATCHER_BACKEND: file
+      CATCHER_FILE_PATH: tests/test-messages.json
+      LOG_FORMAT: text
+    cmds:
+      - go run .
+{%- endif %}
+
+  trigger-release:
+    desc: Trigger Release workflow on GitHub Actions
+    cmds:
+      - |
+        echo "Triggering Release workflow..."
+        gh workflow run Release
+        sleep 2
+        RUN_ID=$(gh run list --workflow=Release --limit=1 --json databaseId --jq '.[0].databaseId')
+        echo "Run: https://github.com/${{ values.orgName }}/${{ values.fullName }}/actions/runs/${RUN_ID}"
+        gh run watch "${RUN_ID}"
