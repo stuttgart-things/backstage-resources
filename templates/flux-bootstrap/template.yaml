@@ -46,7 +46,7 @@ spec:
           enum:
             - stuttgart-things/harvester
             - stuttgart-things/stuttgart-things
-          default: stuttgart-things/harvester
+          default: stuttgart-things/stuttgart-things
       dependencies:
         source_repo:
           oneOf:
@@ -70,6 +70,7 @@ spec:
                   title: Kubeconfig
                   type: string
                   description: SOPS-encrypted kubeconfig in the repository
+                  default: secrets/kubeconfigs/<CLUSTER-NAME>.yaml
 
     - title: Bootstrap Configuration
       description: Only required for the bootstrap action
@@ -96,11 +97,6 @@ spec:
                   enum:
                     - stuttgart-things/harvester
                     - stuttgart-things/stuttgart-things
-                destination_path:
-                  title: Destination Path
-                  type: string
-                  description: Path in the target repository for Flux config
-                  default: clusters/infra
                 operator_version:
                   title: Flux Operator Version
                   type: string
@@ -110,6 +106,27 @@ spec:
                     - "0.42.1"
                     - "0.41.0"
                     - "0.40.0"
+              dependencies:
+                repository:
+                  oneOf:
+                    - properties:
+                        repository:
+                          enum:
+                            - stuttgart-things/harvester
+                        destination_path:
+                          title: Destination Path
+                          type: string
+                          description: "Path in the target repository for Flux config (e.g. clusters/<CLUSTER-NAME>)"
+                          default: clusters/<CLUSTER-NAME>
+                    - properties:
+                        repository:
+                          enum:
+                            - stuttgart-things/stuttgart-things
+                        destination_path:
+                          title: Destination Path
+                          type: string
+                          description: "Path in the target repository for Flux config (e.g. clusters/labul/vsphere/sthings-infra)"
+                          default: clusters/<LAB>/<CLOUD>/<CLUSTER-NAME>
 
   steps:
     - id: dispatch-bootstrap
