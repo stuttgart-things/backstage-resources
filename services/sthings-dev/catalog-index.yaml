@@ -12,6 +12,14 @@ spec:
     - https://github.com/stuttgart-things/blueprints/blob/main/catalog-info.yaml
     - https://github.com/stuttgart-things/tasks/blob/main/catalog-info.yaml
     - https://github.com/stuttgart-things/harvester/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-core-catcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-demo-pitcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-git-pitcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-k8s-pitcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-led-catcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-light-catcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-omni-pitcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun-library/blob/main/catalog-info.yaml
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Location
@@ -112,3 +120,13 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/flux-bootstrap/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: render-terraform-call
+  description: Render Terraform call templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/render-terraform-call/template.yaml
