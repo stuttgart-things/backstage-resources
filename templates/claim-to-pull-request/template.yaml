@@ -49,13 +49,51 @@ spec:
             - Flux (kustomization + catalog-info)
             - Only Manifests
 
+    - title: Target Repository
+      description: Select the repository and path where claim manifests will be committed
+      required:
+        - repository
+      properties:
+        repository:
+          title: Repository
+          type: string
+          description: GitHub repository for the claim PR
+          enum:
+            - stuttgart-things/harvester
+            - stuttgart-things/stuttgart-things
+          default: stuttgart-things/harvester
+      dependencies:
+        repository:
+          oneOf:
+            - properties:
+                repository:
+                  enum:
+                    - stuttgart-things/harvester
+                basePath:
+                  title: Base Path
+                  type: string
+                  description: Base folder for claims in the repository
+                  default: claims
+                  enum:
+                    - claims
+            - properties:
+                repository:
+                  enum:
+                    - stuttgart-things/stuttgart-things
+                basePath:
+                  title: Base Path
+                  type: string
+                  description: "Base folder for claims (e.g. clusters/labul/vsphere/claims)"
+                  default: clusters/<LAB>/<CLOUD>/claims
+
   steps:
     - id: render-claims
       name: Render Claims and Create PR
       action: claim-machinery:render-multiple
       input:
         claims: ${{ parameters.claims }}
-        repository: stuttgart-things/harvester
+        repository: ${{ parameters.repository }}
+        basePath: ${{ parameters.basePath }}
         claimCategory: ${{ parameters.category }}
         targetBranch: main
         mode: ${{ parameters.mode }}
