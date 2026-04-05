@@ -37,6 +37,18 @@ spec:
             - apps
             - other-resources
 
+        mode:
+          title: Commit Mode
+          type: string
+          description: "flux: dedicated folders with kustomization + catalog-info; onlyManifest: just the rendered YAML files"
+          default: flux
+          enum:
+            - flux
+            - onlyManifest
+          enumNames:
+            - Flux (kustomization + catalog-info)
+            - Only Manifests
+
   steps:
     - id: render-claims
       name: Render Claims and Create PR
@@ -46,9 +58,8 @@ spec:
         repository: stuttgart-things/harvester
         claimCategory: ${{ parameters.category }}
         targetBranch: main
-        generateCatalogInfo: true
+        mode: ${{ parameters.mode }}
         catalogOwner: platform-team
-        generateKustomization: true
 
     - id: log-summary
       name: Summary
