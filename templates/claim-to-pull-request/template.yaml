@@ -4,7 +4,7 @@ kind: Template
 metadata:
   name: claim-to-pull-request
   title: Create Resource claims
-  description: Create a GitHub Pull Request with a rendered claim manifest
+  description: Create a GitHub Pull Request with rendered claim manifests (supports single or multiple claims)
   tags:
     - crossplane
     - kubernetes
@@ -16,189 +16,71 @@ spec:
   type: service
 
   parameters:
-    - title: Basic Info
+    - title: Resource Claims
+      description: Select one or more claim templates and configure parameters for each
       required:
-        - claimTemplate
-        - resourceName
+        - claims
         - category
       properties:
-        claimTemplate:
-          title: Claim Template
+        claims:
+          title: Claims
           type: string
-          description: Select a Claim Machinery template to render
-          ui:field: ClaimMachineryPicker
-          ui:options:
-            allowArbitraryValues: false
-
-        resourceName:
-          title: Resource Name
-          type: string
-          description: Name for your claim resource
-          pattern: '^[a-z0-9-]+$'
-          minLength: 3
+          description: Select templates and configure parameters for each claim
+          ui:field: ClaimMachineryMultiClaim
 
         category:
           title: Category
           type: string
-          description: Category for the claim resource
+          description: Category for the claim resources
           enum:
             - infra
             - apps
             - other-resources
 
-        prTitlePreview:
-          title: Pull Request Title (preview)
-          type: string
-          ui:readonly: true
-          default: "Add <claimTemplate> claim - <resourceName>"
-          description: |
-            The pull request title will be automatically generated as:
-            "Add <template> claim - <name>"
-
-    - title: Template Parameters
-      description: Configure the parameters for your selected template
-      properties:
-        parameters:
-          title: Template Parameters
-          type: object
-          description: Parameters specific to the selected template
-          ui:field: ClaimMachineryParameters
-
   steps:
-    - id: render
-      name: Render Claim
-      action: claim-machinery:render
+    - id: render-claims
+      name: Render Claims and Create PR
+      action: claim-machinery:render-multiple
       input:
-        template: ${{ parameters.claimTemplate }}
-        parameters: ${{ parameters.parameters }}
-        nameOverride: ${{ parameters.resourceName }}
-        outputPath: ${{ parameters.resourceName }}
-
-    - id: log-manifest
-      name: Show Rendered Manifest
-      action: debug:log
-      input:
-        message: |
-          Claim rendered successfully!
-
-          File: ${{ steps['render'].output.filePath }}
-
-          Manifest content:
-          ${{ steps['render'].output.manifest }}
-
-    - id: render-catalog
-      name: Render Catalog Info
-      action: fetch:template:file
-      input:
-        url: ./template/catalog-info.yaml
-        targetPath: ./${{ parameters.resourceName }}/catalog-info.yaml
-        values:
-          claimTemplate: ${{ parameters.claimTemplate }}
-          resourceName: ${{ parameters.resourceName }}
-          category: ${{ parameters.category }}
-
-    - id: render-kustomization
-      name: Render Kustomization
-      action: fetch:template:file
-      input:
-        url: ./template/kustomization.yaml
-        targetPath: ./${{ parameters.resourceName }}/kustomization.yaml
-        values:
-          claimTemplate: ${{ parameters.claimTemplate }}
-
-    - id: fetch-parent-kustomization
-      name: Fetch Parent Kustomization
-      action: fetch:plain:file
-      input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/claims/${{ parameters.category }}/kustomization.yaml
-        targetPath: ./kustomization.yaml
-
-    - id: fix-empty-resources
-      name: Fix Empty Resources Array
-      action: roadiehq:utils:fs:replace
-      input:
-        files:
-          - file: ./kustomization.yaml
-            find: 'resources: []'
-            replaceWith: 'resources:'
-
-    - id: update-parent-kustomization
-      name: Update Parent Kustomization
-      action: roadiehq:utils:fs:append
-      input:
-        path: ./kustomization.yaml
-        content: "  - ${{ parameters.resourceName }}\n"
-
-    - id: create-pull-request
-      name: Create GitHub Pull Request
-      action: publish:github:pull-request
-      input:
-        repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: claim-${{ parameters.claimTemplate }}-${{ parameters.resourceName }}
-        update: true
-        title: Add ${{ parameters.claimTemplate }} claim - ${{ parameters.resourceName }}
-        description: |
-          ## Claim Manifest Created via Backstage
-
-          **Template**: ${{ parameters.claimTemplate }}
-          **Resource Name**: ${{ parameters.resourceName }}
-          **Category**: ${{ parameters.category }}
-
-          ### Manifest Details
-          ```yaml
-          ${{ steps['render'].output.manifest }}
-          ```
-
-          Created automatically via Backstage Claim Machinery integration.
-        targetPath: claims/${{ parameters.category }}
+        claims: ${{ parameters.claims }}
+        repository: stuttgart-things/harvester
+        claimCategory: ${{ parameters.category }}
+        targetBranch: main
+        generateCatalogInfo: true
+        catalogOwner: platform-team
+        generateKustomization: true
 
     - id: log-summary
       name: Summary
       action: debug:log
       input:
         message: |
-          Template: ${{ parameters.claimTemplate }}
-          Manifest saved to: claims/${{ parameters.category }}/${{ parameters.resourceName }}/${{ steps['render'].output.filePath }}
-          Pull Request created successfully!
+          Pull request created successfully!
+          PR URL: ${{ steps['render-claims'].output.pullRequestUrl }}
 
-    - id: register
-      name: Register in Catalog
-      action: catalog:register
-      input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/claim-${{ parameters.claimTemplate }}-${{ parameters.resourceName }}/claims/${{ parameters.category }}/${{ parameters.resourceName }}/catalog-info.yaml
-        optional: true
+          Combined manifest:
+          ${{ steps['render-claims'].output.manifest }}
 
   output:
     links:
       - title: GitHub Pull Request
         icon: github
-        url: ${{ steps['create-pull-request'].output.remoteUrl }}
-      - title: Open in Catalog
-        icon: catalog
-        entityRef: ${{ steps['register'].output.entityRef }}
+        url: ${{ steps['render-claims'].output.pullRequestUrl }}
     text:
       - title: Pull Request Created
         content: |
           A pull request has been created at:
-          ${{ steps['create-pull-request'].output.remoteUrl }}
+          ${{ steps['render-claims'].output.pullRequestUrl }}
 
-          Branch: `claim-${{ parameters.claimTemplate }}-${{ parameters.resourceName }}`
-      - title: Rendered Manifest
+          Branch: `${{ steps['render-claims'].output.branchName }}`
+      - title: Rendered Manifests
         content: |
           ```yaml
-          ${{ steps['render'].output.manifest }}
+          ${{ steps['render-claims'].output.manifest }}
           ```
-      - title: Catalog Component Preview
-        content: |
-          The following catalog entity will be registered once the PR is merged:
-          - **Name**: ${{ parameters.resourceName }}
-          - **Type**: crossplane-claim
-          - **Category**: ${{ parameters.category }}
-          - **Template**: ${{ parameters.claimTemplate }}
-      - title: File Location
-        content: The manifest will be saved to `claims/${{ parameters.category }}/${{ parameters.resourceName }}/`
       - title: Next Steps
         content: |
           1. Review the pull request in GitHub
-          2. Merge the PR to add the claim to the repository
-          3. The catalog component will be available after merge at: `component:default/${{ parameters.resourceName }}`
+          2. Merge the PR to add the claim(s) to the repository
+          3. The catalog components will be available after merge
+          4. Claims will be reconciled by the cluster controller
