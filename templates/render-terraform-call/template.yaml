@@ -1,0 +1,206 @@
+---
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: render-terraform-call
+  title: Render Terraform Module Call
+  description: Create a GitHub Pull Request with rendered Terraform module call files
+  tags:
+    - terraform
+    - infrastructure
+    - gitops
+    - vault
+    - kubernetes
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Terraform Call Template
+      required:
+        - terraformCall
+      properties:
+        terraformCall:
+          title: Terraform Call Template
+          type: string
+          description: Select the Terraform module call to render
+          enum:
+            - vault-pki-k8s
+          enumNames:
+            - Vault PKI + K8s (vault-base-setup module)
+
+    - title: Cluster Configuration
+      required:
+        - clusterName
+        - kubeconfigPath
+      properties:
+        clusterName:
+          title: Cluster Name
+          type: string
+          description: Name of the target Kubernetes cluster
+          pattern: '^[a-z0-9-]+$'
+          default: sthings-infra
+
+        kubeconfigPath:
+          title: Kubeconfig Path
+          type: string
+          description: Path to the kubeconfig file on the target machine
+          default: /home/sthings/.kube/sthings-infra-labul
+
+    - title: Vault Configuration
+      required:
+        - vaultAddr
+        - pkiCommonName
+        - pkiRoleName
+        - pkiAllowedDomain
+      properties:
+        vaultAddr:
+          title: Vault Address
+          type: string
+          description: Vault server URL
+          default: https://vault.sthings-infra.sthings-vsphere.labul.sva.de
+
+        vaultIssuerServer:
+          title: Vault Issuer Server (in-cluster)
+          type: string
+          description: Vault server URL for cert-manager ClusterIssuer (cluster-internal)
+          default: http://vault-server.vault.svc.cluster.local:8200
+
+        pkiCommonName:
+          title: PKI Common Name
+          type: string
+          description: PKI root CA common name / allowed domain
+          default: sthings-infra.sthings-vsphere.labul.sva.de
+
+        pkiRoleName:
+          title: PKI Role Name
+          type: string
+          description: Name of the PKI role for cert-manager
+          default: sthings-vsphere
+
+        pkiAllowedDomain:
+          title: PKI Allowed Domain
+          type: string
+          description: Domain allowed for certificate issuance (wildcard subdomains enabled)
+          default: sthings-vsphere.labul.sva.de
+
+    - title: Backend Configuration
+      required:
+        - backendSecretSuffix
+        - backendNamespace
+      properties:
+        backendSecretSuffix:
+          title: Backend Secret Suffix
+          type: string
+          description: Suffix for the Kubernetes secret storing Terraform state
+          default: vault-sthings-infra
+
+        backendNamespace:
+          title: Backend Namespace
+          type: string
+          description: Kubernetes namespace for Terraform state secret
+          default: vault
+
+    - title: Pull Request Target
+      required:
+        - targetRepo
+        - targetPath
+      properties:
+        targetRepo:
+          title: Target Repository
+          type: string
+          description: GitHub repository for the pull request (owner/repo)
+          enum:
+            - stuttgart-things/stuttgart-things
+            - stuttgart-things/harvester
+          default: stuttgart-things/stuttgart-things
+
+        targetPath:
+          title: Target Path
+          type: string
+          description: Path in the repository where the Terraform files will be placed
+          default: clusters/labul/vsphere/sthings-infra/vault
+
+  steps:
+    - id: render-terraform
+      name: Render Terraform Files
+      action: fetch:template
+      input:
+        url: ./template/${{ parameters.terraformCall }}
+        values:
+          clusterName: ${{ parameters.clusterName }}
+          kubeconfigPath: ${{ parameters.kubeconfigPath }}
+          vaultAddr: ${{ parameters.vaultAddr }}
+          vaultIssuerServer: ${{ parameters.vaultIssuerServer }}
+          pkiCommonName: ${{ parameters.pkiCommonName }}
+          pkiRoleName: ${{ parameters.pkiRoleName }}
+          pkiAllowedDomain: ${{ parameters.pkiAllowedDomain }}
+          backendSecretSuffix: ${{ parameters.backendSecretSuffix }}
+          backendNamespace: ${{ parameters.backendNamespace }}
+
+    - id: log-summary
+      name: Show Rendered Summary
+      action: debug:log
+      input:
+        message: |
+          Terraform call rendered successfully!
+
+          Template: ${{ parameters.terraformCall }}
+          Cluster: ${{ parameters.clusterName }}
+          Vault: ${{ parameters.vaultAddr }}
+          PKI Role: ${{ parameters.pkiRoleName }}
+          Target: ${{ parameters.targetRepo }} @ ${{ parameters.targetPath }}
+
+    - id: create-pull-request
+      name: Create GitHub Pull Request
+      action: publish:github:pull-request
+      input:
+        repoUrl: github.com?owner=${{ parameters.targetRepo.split('/')[0] }}&repo=${{ parameters.targetRepo.split('/')[1] }}
+        branchName: terraform-${{ parameters.terraformCall }}-${{ parameters.clusterName }}
+        update: true
+        title: Add ${{ parameters.terraformCall }} terraform call for ${{ parameters.clusterName }}
+        description: |
+          ## Terraform Module Call Created via Backstage
+
+          **Template**: ${{ parameters.terraformCall }}
+          **Cluster**: ${{ parameters.clusterName }}
+          **Vault Address**: ${{ parameters.vaultAddr }}
+          **PKI Common Name**: ${{ parameters.pkiCommonName }}
+          **PKI Role**: ${{ parameters.pkiRoleName }}
+
+          ### Files
+          - `vault.tf` - Module call (PKI, AppRole, KV)
+          - `variables.tf` - Variable declarations
+          - `backend.tf` - Terraform backend (K8s secret)
+          - `outputs.tf` - Outputs (PKI CA, AppRole IDs)
+          - `README.md` - Usage documentation
+
+          Created automatically via Backstage render-terraform-call template.
+        targetPath: ${{ parameters.targetPath }}
+
+  output:
+    links:
+      - title: GitHub Pull Request
+        icon: github
+        url: ${{ steps['create-pull-request'].output.remoteUrl }}
+    text:
+      - title: Pull Request Created
+        content: |
+          A pull request has been created at:
+          ${{ steps['create-pull-request'].output.remoteUrl }}
+
+          Branch: `terraform-${{ parameters.terraformCall }}-${{ parameters.clusterName }}`
+      - title: Rendered Files
+        content: |
+          The following Terraform files will be placed at `${{ parameters.targetPath }}/`:
+          - `vault.tf` - vault-base-setup module call
+          - `variables.tf` - Variable declarations with defaults
+          - `backend.tf` - Kubernetes backend configuration
+          - `outputs.tf` - PKI CA cert and AppRole outputs
+          - `README.md` - Usage instructions
+      - title: Next Steps
+        content: |
+          1. Review the pull request in GitHub
+          2. Merge the PR to add the Terraform config
+          3. Create `terraform.tfvars.json` with AppRole/KV secret values
+          4. Run `terraform init -upgrade && terraform plan && terraform apply`
