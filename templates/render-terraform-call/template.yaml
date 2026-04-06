@@ -2,9 +2,9 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: deploy-vault-pki
-  title: Deploy Vault PKI
-  description: Create a GitHub Pull Request with rendered Vault PKI Terraform module call files
+  name: render-terraform-call
+  title: Render Terraform Module Call
+  description: Create a GitHub Pull Request with rendered Terraform module call files
   tags:
     - terraform
     - infrastructure
@@ -28,8 +28,8 @@ spec:
             - vault-pki-k8s
             - vault-cert-issuer
           enumNames:
-            - Vault PKI + K8s (vault-base-setup module)
-            - Vault Cert Issuer (ClusterIssuer for remote Vault PKI)
+            - Deploy Vault PKI
+            - Deploy Vault Issuer
 
     - title: Cluster Configuration
       required:
