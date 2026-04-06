@@ -26,8 +26,10 @@ spec:
           description: Select the Terraform module call to render
           enum:
             - vault-pki-k8s
+            - vault-cert-issuer
           enumNames:
             - Vault PKI + K8s (vault-base-setup module)
+            - Vault Cert Issuer (ClusterIssuer for remote Vault PKI)
 
     - title: Cluster Configuration
       required:
