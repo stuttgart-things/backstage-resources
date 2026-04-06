@@ -1,5 +1,5 @@
 module "vault-base-setup" {
-  source          = "github.com/stuttgart-things/vault-base-setup"
+  source          = "github.com/stuttgart-things/vault-base-setup?ref=v1.0.0"
   vault_addr      = var.vault_addr
   skip_tls_verify = true
   kubeconfig_path = var.kubeconfig_path

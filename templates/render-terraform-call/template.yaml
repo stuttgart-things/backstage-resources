@@ -2,9 +2,9 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: render-terraform-call
-  title: Render Terraform Module Call
-  description: Create a GitHub Pull Request with rendered Terraform module call files
+  name: deploy-vault-pki
+  title: Deploy Vault PKI
+  description: Create a GitHub Pull Request with rendered Vault PKI Terraform module call files
   tags:
     - terraform
     - infrastructure
@@ -39,13 +39,13 @@ spec:
           type: string
           description: Name of the target Kubernetes cluster
           pattern: '^[a-z0-9-]+$'
-          default: sthings-infra
+          default: infra-sthings
 
         kubeconfigPath:
           title: Kubeconfig Path
           type: string
           description: Path to the kubeconfig file on the target machine
-          default: /home/sthings/.kube/sthings-infra-labul
+          default: /home/sthings/.kube/infra-sthings
 
     - title: Vault Configuration
       required:
@@ -58,7 +58,7 @@ spec:
           title: Vault Address
           type: string
           description: Vault server URL
-          default: https://vault.sthings-infra.sthings-vsphere.labul.sva.de
+          default: https://vault.infra.sthings-vsphere.labul.sva.de
 
         vaultIssuerServer:
           title: Vault Issuer Server (in-cluster)
@@ -70,7 +70,7 @@ spec:
           title: PKI Common Name
           type: string
           description: PKI root CA common name / allowed domain
-          default: sthings-infra.sthings-vsphere.labul.sva.de
+          default: infra.sthings-vsphere.labul.sva.de
 
         pkiRoleName:
           title: PKI Role Name
@@ -119,7 +119,7 @@ spec:
           title: Target Path
           type: string
           description: Path in the repository where the Terraform files will be placed
-          default: clusters/labul/vsphere/sthings-infra/vault
+          default: clusters/labul/vsphere/infra-sthings/vault-ca
 
   steps:
     - id: render-terraform
@@ -172,7 +172,7 @@ spec:
           - `vault.tf` - Module call (PKI, AppRole, KV)
           - `variables.tf` - Variable declarations
           - `backend.tf` - Terraform backend (K8s secret)
-          - `outputs.tf` - Outputs (PKI CA, AppRole IDs)
+          - `outputs.tf` - Outputs (PKI CA cert)
           - `README.md` - Usage documentation
 
           Created automatically via Backstage render-terraform-call template.
@@ -196,7 +196,7 @@ spec:
           - `vault.tf` - vault-base-setup module call
           - `variables.tf` - Variable declarations with defaults
           - `backend.tf` - Kubernetes backend configuration
-          - `outputs.tf` - PKI CA cert and AppRole outputs
+          - `outputs.tf` - PKI CA cert output
           - `README.md` - Usage instructions
       - title: Next Steps
         content: |

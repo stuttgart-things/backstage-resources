@@ -11,12 +11,12 @@ Configures the Vault PKI secrets engine, AppRole auth, KV v2 secrets, and a cert
 ## Structure
 
 ```
-vault/
-├── backend.tf              # Terraform backend (K8s secret in ${{ values.backendNamespace }} namespace)
-├── vault.tf                # Module call (PKI, AppRole, KV)
-├── variables.tf            # Variable declarations
-├── outputs.tf              # Outputs (PKI CA, AppRole IDs)
-├── terraform.tfvars.json   # Secret values (gitignored, SOPS-encryptable)
+vault-ca/
+├── backend.tf                  # Terraform backend (K8s secret in ${{ values.backendNamespace }} namespace)
+├── vault.tf                    # Module call (PKI, AppRole, KV)
+├── variables.tf                # Variable declarations
+├── outputs.tf                  # Outputs (PKI CA, AppRole IDs)
+├── terraform.tfvars.sops.json  # Secret values (SOPS encrypted)
 └── README.md
 ```
 
@@ -59,36 +59,23 @@ dagger call -m github.com/stuttgart-things/dagger/sops@v0.82.1 decrypt \
   export --path=terraform.tfvars.json
 ```
 
-### Example terraform.tfvars.json
-
-```json
-{
-  "approle_roles": [
-    {
-      "name": "argocd",
-      "token_policies": ["read-all-apps-kvv2", "pki-issue"]
-    }
-  ],
-  "secret_engines": [
-    {
-      "path": "apps",
-      "name": "test",
-      "description": "Application secrets",
-      "data_json": "{\"username\": \"testuser\", \"password\": \"testpassword\"}"
-    }
-  ],
-  "kv_policies": [
-    {
-      "name": "read-all-apps-kvv2",
-      "capabilities": "path \"apps/data/*\" {\n    capabilities = [\"read\", \"list\"]\n}\npath \"apps/metadata/*\" {\n    capabilities = [\"read\", \"list\"]\n}\n"
-    }
-  ]
-}
-```
 
 ## Usage
 
 ```bash
+# VIA DAGGER
+dagger call -m github.com/stuttgart-things/blueprints/configuration@v1.79.0 terraform-apply \
+  --sops-age-key env:SOPS_AGE_KEY \
+  --encrypted-files "terraform.tfvars.sops.json" \
+  --terraform-dir=<path-to-vault-ca> \
+  --kube-config file://${{ values.kubeconfigPath }} \
+  --kube-config-path "${{ values.kubeconfigPath }}" \
+  --export-tf-output=true file --path output.json contents \
+  --progress plain -vvvv
+```
+
+```bash
+# MANUAL
 export KUBECONFIG=${{ values.kubeconfigPath }}
 export VAULT_ADDR=${{ values.vaultAddr }}
 export VAULT_SKIP_VERIFY=true
@@ -99,13 +86,67 @@ terraform plan
 terraform apply
 ```
 
-## Get AppRole Credentials
+## Testing
 
-After apply, retrieve the AppRole credentials for consumer clusters (e.g. ArgoCD):
+Issue a test certificate against the `vault-pki` ClusterIssuer:
 
 ```bash
-terraform output approle_role_ids
-terraform output -json approle_secret_ids
+export KUBECONFIG=${{ values.kubeconfigPath }}
+
+# Create test certificate
+kubectl apply -f - <<'EOF'
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-vault-cert
+  namespace: default
+spec:
+  secretName: test-vault-cert-tls
+  issuerRef:
+    name: vault-pki
+    kind: ClusterIssuer
+  commonName: test.${{ values.pkiAllowedDomain }}
+  dnsNames:
+    - test.${{ values.pkiAllowedDomain }}
+  duration: 24h
+  renewBefore: 1h
+EOF
+
+# Verify it becomes Ready
+kubectl get certificate test-vault-cert -n default
+
+# Clean up
+kubectl delete certificate test-vault-cert -n default
+kubectl delete secret test-vault-cert-tls -n default
+```
+
+## Install CA Certificate Locally
+
+To trust certificates issued by the Vault PKI CA on your local machine:
+
+```bash
+export KUBECONFIG=${{ values.kubeconfigPath }}
+
+# Extract the CA certificate
+kubectl get secret vault-pki-ca -n cert-manager \
+  -o jsonpath='{.data.ca\.crt}' | base64 -d > vault-pki-ca.crt
+
+# Install (Ubuntu/Debian)
+sudo cp vault-pki-ca.crt /usr/local/share/ca-certificates/vault-pki-ca.crt
+sudo update-ca-certificates
+
+# Install (RHEL/Fedora)
+sudo cp vault-pki-ca.crt /etc/pki/ca-trust/source/anchors/vault-pki-ca.crt
+sudo update-ca-trust
+
+# Install (macOS)
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain vault-pki-ca.crt
+
+# Verify
+openssl x509 -in vault-pki-ca.crt -noout -subject -issuer
+# subject=C=DE, O=sva, CN=${{ values.pkiCommonName }}
+# issuer=C=DE, O=sva, CN=${{ values.pkiCommonName }}
 ```
 
 ## State
