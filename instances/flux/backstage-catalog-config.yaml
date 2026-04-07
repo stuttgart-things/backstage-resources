@@ -16,3 +16,7 @@ data:
           target: https://github.com/stuttgart-things/backstage-resources/blob/main/services/sthings-dev/catalog-index.yaml
           rules:
             - allow: [Component, Location, System, API, Resource, Template]
+        - type: url
+          target: https://github.com/stuttgart-things/stuttgart-things/blob/main/terraform/catalog-info.yaml
+          rules:
+            - allow: [Location, Resource]
