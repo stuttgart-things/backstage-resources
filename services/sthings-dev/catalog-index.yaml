@@ -46,6 +46,16 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
+  name: terraform-proxmox-vm-dagger-template-apply
+  description: Proxmox VM Terraform and Dagger software templates apply
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/proxmox-vm/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
   name: terraform-vm-dagger-template-destroy
   description: Terraform and Dagger software templates destroy
 spec:
