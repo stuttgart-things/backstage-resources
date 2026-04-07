@@ -27,9 +27,11 @@ spec:
           enum:
             - vault-pki-k8s
             - vault-cert-issuer
+            - vault-app-role
           enumNames:
             - Deploy Vault PKI
             - Deploy Vault Issuer
+            - Deploy Vault AppRole
 
     - title: Cluster Configuration
       required:
