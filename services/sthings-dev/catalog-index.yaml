@@ -144,6 +144,36 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
+  name: create-terraform-vm-template
+  description: Create Terraform VM (vSphere & Proxmox) software template
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/create-terraform-vm/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: delete-terraform-vm-template
+  description: Delete Terraform VM (vSphere & Proxmox) software template
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/delete-terraform-vm/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: proxmox-vm-template
+  description: Proxmox VM Terraform software template
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/proxmox-vm/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
   name: render-terraform-call
   description: Render Terraform call templates
 spec:
