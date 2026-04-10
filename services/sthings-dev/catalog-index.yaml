@@ -44,36 +44,6 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
-  name: terraform-vm-dagger-template-apply
-  description: Terraform and Dagger software templates apply
-spec:
-  type: url
-  targets:
-    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/vsphere-vm/template.yaml
----
-apiVersion: backstage.io/v1alpha1
-kind: Location
-metadata:
-  name: terraform-proxmox-vm-dagger-template-apply
-  description: Proxmox VM Terraform and Dagger software templates apply
-spec:
-  type: url
-  targets:
-    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/proxmox-vm/template.yaml
----
-apiVersion: backstage.io/v1alpha1
-kind: Location
-metadata:
-  name: terraform-vm-dagger-template-destroy
-  description: Terraform and Dagger software templates destroy
-spec:
-  type: url
-  targets:
-    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/vsphere-vm-destroy/template.yaml
----
-apiVersion: backstage.io/v1alpha1
-kind: Location
-metadata:
   name: golang-service-templates
   description: Go Service software templates
 spec:
@@ -160,16 +130,6 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/delete-terraform-vm/template.yaml
----
-apiVersion: backstage.io/v1alpha1
-kind: Location
-metadata:
-  name: proxmox-vm-template
-  description: Proxmox VM Terraform software template
-spec:
-  type: url
-  targets:
-    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/proxmox-vm/template.yaml
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Location
