@@ -101,11 +101,10 @@ spec:
                   title: Flux Operator Version
                   type: string
                   description: Version of the Flux operator to deploy
-                  default: "0.42.1"
+                  default: "0.47.0"
                   enum:
+                    - "0.47.0"
                     - "0.42.1"
-                    - "0.41.0"
-                    - "0.40.0"
               dependencies:
                 repository:
                   oneOf:
@@ -126,7 +125,7 @@ spec:
                           title: Destination Path
                           type: string
                           description: "Path in the target repository for Flux config (e.g. clusters/labul/vsphere/sthings-infra)"
-                          default: clusters/<LAB>/<CLOUD>/<CLUSTER-NAME>
+                          default: clusters/labul/vsphere/<CLUSTER-NAME>
 
   steps:
     - id: dispatch-bootstrap
