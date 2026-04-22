@@ -127,6 +127,18 @@ spec:
                           description: "Path in the target repository for Flux config (e.g. clusters/labul/vsphere/sthings-infra)"
                           default: clusters/labul/vsphere/<CLUSTER-NAME>
 
+    - title: Runner Configuration
+      description: Optional - select the self-hosted GitHub runner for the workflow
+      properties:
+        runs_on:
+          title: Runner
+          type: string
+          description: GitHub Actions runner label to execute the workflow on
+          enum:
+            - dagger-labda
+            - dagger-labul
+          default: dagger-labda
+
   steps:
     - id: dispatch-bootstrap
       name: Trigger Flux Bootstrap
@@ -142,6 +154,7 @@ spec:
           repository: ${{ parameters.repository }}
           destination-path: ${{ parameters.destination_path }}
           operator-version: ${{ parameters.operator_version }}
+          runs-on: ${{ parameters.runs_on }}
 
     - id: dispatch-check
       name: Trigger Flux Check
@@ -154,6 +167,7 @@ spec:
         workflowInputs:
           source-repo: ${{ parameters.source_repo }}
           kube-config: ${{ parameters.kube_config }}
+          runs-on: ${{ parameters.runs_on }}
 
     - id: dispatch-destroy
       name: Trigger Flux Destroy
@@ -166,6 +180,7 @@ spec:
         workflowInputs:
           source-repo: ${{ parameters.source_repo }}
           kube-config: ${{ parameters.kube_config }}
+          runs-on: ${{ parameters.runs_on }}
 
   output:
     links:
