@@ -150,3 +150,13 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/render-terraform-call/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: create-argocd-cluster-templates
+  description: ArgoCD cluster registration templates (clusterbook)
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/create-argocd-cluster/template.yaml
