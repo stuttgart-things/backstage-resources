@@ -1,0 +1,4 @@
+packages:
+{%- for pkg in values.packages %}
+  - ${{ pkg }}
+{%- endfor %}

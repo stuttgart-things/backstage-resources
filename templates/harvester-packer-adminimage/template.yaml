@@ -1,0 +1,366 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: harvester-packer-adminimage
+  title: Create Hardened Harvester VM-Template (Admin)
+  description: >-
+    Build a CIS-hardened, stageable Packer image. Picks a hardening profile and
+    security tooling, targets a staging or production stage, and opens a
+    review-gated (draft) PR — no auto-merge. For platform admins.
+  tags:
+    - harvester
+    - packer
+    - infrastructure
+    - hardening
+    - admin
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Base Image
+      properties:
+        baseImage:
+          title: Base Image
+          type: string
+          description: Select the base image to harden
+          enum:
+            - ubuntu22
+            - ubuntu26
+            - opensuse-leap
+            - rocky
+          enumNames:
+            - 🟠 Ubuntu 22.04 (Jammy)
+            - 🟠 Ubuntu 26.04 LTS
+            - 🦎 openSUSE Leap 15.6
+            - 🪨 Rocky Linux 9.7
+          default: ubuntu22
+        targetNameOverride:
+          title: Target Name Override (optional)
+          type: string
+          description: >-
+            Leave empty to use the stage-derived name
+            (e.g. u26-staging / u26-prod).
+
+    - title: Hardening
+      description: |
+        Apply a CIS Benchmark profile and bake in security tooling. The base
+        image's existing packages/users are preserved and merged.
+      properties:
+        cisProfile:
+          title: CIS Hardening Profile
+          type: string
+          description: CIS Benchmark profile applied during the Packer build
+          enum:
+            - cis-level1-server
+            - cis-level2-server
+          enumNames:
+            - 🛡️ CIS Level 1 – Server (baseline hardening)
+            - 🛡️ CIS Level 2 – Server (defense-in-depth)
+          default: cis-level1-server
+        securityTooling:
+          title: Security Tooling
+          type: array
+          description: >-
+            Hardening / monitoring packages baked into the image
+            (merged & de-duplicated with the base package list).
+          default:
+            - auditd
+            - aide
+            - fail2ban
+            - unattended-upgrades
+          items:
+            type: string
+          ui:options:
+            addable: true
+            orderable: false
+            removable: true
+
+    - title: Stage
+      description: |
+        Staging images are built first for validation. Re-run this template with
+        the **Production** stage to promote — the production build is gated by a
+        human review (draft PR, no auto-merge).
+      properties:
+        stage:
+          title: Target Stage
+          type: string
+          description: Which stage to build for
+          enum:
+            - staging
+            - production
+          enumNames:
+            - 🟡 Staging (build & validate first)
+            - 🟢 Production (promotion — requires review)
+          default: staging
+
+    - title: Add New Users
+      description: |
+        Existing users from the selected base image will be preserved.
+      properties:
+        users:
+          title: Add New Users
+          type: array
+          description: New users to add to the image (existing users are preserved)
+          ui:help: "View users at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
+          default: []
+          items:
+            type: object
+            required: [name, ssh_authorized_keys]
+            properties:
+              name:
+                title: Username
+                type: string
+              groups:
+                title: Groups
+                type: string
+                default: sudo
+              shell:
+                title: Shell
+                type: string
+                default: /bin/bash
+              sudo:
+                title: Sudo rule
+                type: string
+                default: "ALL=(ALL) NOPASSWD:ALL" # pragma: allowlist secret
+              ssh_authorized_keys:
+                title: SSH Public Keys
+                type: array
+                description: SSH public keys for authorized access
+                items:
+                  type: string
+                minItems: 1
+          ui:options:
+            addable: true
+            orderable: false
+            removable: true
+
+    - title: Additional Packages
+      description: |
+        Existing packages from the selected base image will be preserved.
+      properties:
+        packages:
+          title: Additional Packages
+          type: array
+          description: New packages to add to the image (existing packages are preserved)
+          ui:help: "View packages at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
+          default: []
+          items:
+            type: string
+          ui:options:
+            addable: true
+            orderable: false
+            removable: true
+
+  steps:
+    - id: resolve-target-name
+      name: Resolve Target Name
+      action: roadiehq:utils:jsonata
+      input:
+        data:
+          baseImage: ${{ parameters.baseImage }}
+          stage: ${{ parameters.stage }}
+          override: ${{ parameters.targetNameOverride }}
+          baseMap:
+            ubuntu22: u22
+            ubuntu26: u26
+            opensuse-leap: suse15
+            rocky: rocky9
+          stageMap:
+            staging: staging
+            production: prod
+        # <baseShort>-<stageSuffix>, e.g. u26-staging / u26-prod
+        expression: "override != '' ? override : $lookup(baseMap, baseImage) & '-' & $lookup(stageMap, stage)"
+
+    - id: fetch-existing-packages
+      name: Fetch Existing Packages (seed from base image)
+      action: fetch:plain:file
+      input:
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/packages.yaml
+        targetPath: ./packages-existing.yaml
+
+    - id: parse-existing-packages
+      name: Parse Existing Packages
+      action: utils:yaml:parse
+      input:
+        filePath: ./packages-existing.yaml
+
+    - id: combine-packages
+      name: Merge & Deduplicate Packages
+      action: roadiehq:utils:jsonata
+      input:
+        data:
+          existing: ${{ steps['parse-existing-packages'].output.content.packages | default([]) }}
+          tooling: ${{ parameters.securityTooling | default([]) }}
+          new: ${{ parameters.packages | default([]) }}
+        # base packages + security tooling + admin additions, de-duplicated
+        expression: "$distinct($append($append(existing, tooling), new))"
+
+    - id: render-packages
+      name: Render Complete Packages File
+      action: fetch:template:file
+      input:
+        url: ./template/packages.yaml
+        targetPath: ./packages.yaml
+        values:
+          packages: ${{ steps['combine-packages'].output.result | default([]) }}
+
+    - id: fetch-existing-users
+      name: Fetch Existing Users (seed from base image)
+      action: fetch:plain:file
+      input:
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/users.yaml
+        targetPath: ./users-existing.yaml
+
+    - id: parse-existing-users
+      name: Parse Existing Users
+      action: utils:yaml:parse
+      input:
+        filePath: ./users-existing.yaml
+
+    - id: combine-users
+      name: Merge & Deduplicate Users
+      action: roadiehq:utils:jsonata
+      input:
+        data:
+          existing: ${{ steps['parse-existing-users'].output.content.users | default([]) }}
+          new: ${{ parameters.users | default([]) }}
+        # Keep existing users whose name is NOT re-submitted, then append the
+        # new ones — so a re-submitted username updates instead of duplicating.
+        expression: "$append(existing[$not(name in new.name)], new)"
+
+    - id: render-users
+      name: Render Complete Users File
+      action: fetch:template:file
+      input:
+        url: ./template/users-additions.yaml
+        targetPath: ./users.yaml
+        values:
+          users: ${{ steps['combine-users'].output.result | default([]) }}
+
+    - id: render-hardening
+      name: Render Hardening Config
+      action: fetch:template:file
+      input:
+        url: ./template/hardening.yaml
+        targetPath: ./hardening.yaml
+        values:
+          cisProfile: ${{ parameters.cisProfile }}
+          stage: ${{ parameters.stage }}
+          tooling: ${{ parameters.securityTooling | default([]) }}
+
+    - id: render-catalog
+      name: Render Catalog Info
+      action: fetch:template:file
+      input:
+        url: ./template/catalog-info.yaml
+        targetPath: ./catalog-info.yaml
+        values:
+          users: ${{ parameters.users }}
+          packages: ${{ parameters.packages }}
+          tooling: ${{ parameters.securityTooling | default([]) }}
+          cisProfile: ${{ parameters.cisProfile }}
+          stage: ${{ parameters.stage }}
+          baseImage: ${{ parameters.baseImage }}
+          targetName: ${{ steps['resolve-target-name'].output.result }}
+
+    - id: create-pull-request
+      name: Create Pull Request (review-gated draft)
+      action: publish:github:pull-request
+      input:
+        repoUrl: github.com?owner=stuttgart-things&repo=harvester
+        branchName: backstage/harden-${{ steps['resolve-target-name'].output.result }}-${{ user.entity.metadata.name | default('anon') }}-config
+        draft: true
+        update: true
+        title: "[HARDENED] ${{ steps['resolve-target-name'].output.result }} (${{ parameters.cisProfile }}) — ${{ parameters.stage }}"
+        description: |
+          ## 🛡️ Hardened Packer Image — ${{ steps['resolve-target-name'].output.result }}
+
+          | Field | Value |
+          |-------|-------|
+          | **Target** | `${{ steps['resolve-target-name'].output.result }}` |
+          | **Base Image** | `${{ parameters.baseImage }}` |
+          | **CIS Profile** | `${{ parameters.cisProfile }}` |
+          | **Stage** | `${{ parameters.stage }}` |
+
+          Generated via the Backstage **admin** hardening template.
+
+          > ⚠️ **Review-gated:** this PR is opened as a **draft** and must NOT be
+          > auto-merged. A platform admin reviews the hardening config and merges
+          > manually. For a Production promotion, confirm the staging image was
+          > validated first.
+        targetPath: packer/${{ steps['resolve-target-name'].output.result }}
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ steps['resolve-target-name'].output.result }}/catalog-info.yaml
+        optional: true
+
+  output:
+    links:
+      - title: Pull Request (draft — needs review)
+        icon: github
+        url: ${{ steps['create-pull-request'].output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
+    text:
+      - title: Next Steps
+        content: |
+          Draft PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
+
+          1. A platform admin reviews the hardening config (`hardening.yaml`).
+          2. Mark the PR ready & merge — the Packer build runs and uploads the
+             `${{ steps['resolve-target-name'].output.result }}` image to Harvester.
+          3. To promote ${{ 'this staging image to production' if parameters.stage == 'staging' else 'further' }},
+             re-run this template with the **Production** stage.
+      - title: Hardened Image Preview
+        content: | #pragma: allowlist secret
+          ## Catalog Entity
+
+          | Field | Value |
+          |-------|-------|
+          | **Name** | ${{ steps['resolve-target-name'].output.result }}-packer-image |
+          | **Kind** | Resource |
+          | **Type** | packer-image-hardened |
+          | **Lifecycle** | ${{ parameters.stage }} |
+          | **CIS Profile** | ${{ parameters.cisProfile }} |
+          | **Owner** | platform-team |
+          | **Base Image** | ${{ parameters.baseImage }} |
+
+          ## Security Tooling
+
+          ${{ 'No tooling selected.' if not parameters.securityTooling else '' }}
+          {%- if parameters.securityTooling %}
+          | # | Package |
+          |---|---------|
+          {%- for tool in parameters.securityTooling %}
+          | ${{ loop.index }} | `${{ tool }}` |
+          {%- endfor %}
+          {%- endif %}
+
+          ## Users
+
+          ${{ 'No new users added.' if not parameters.users else '' }}
+          {%- for user in parameters.users %}
+          ### ${{ user.name }}
+
+          | Setting | Value |
+          |---------|-------|
+          | **Groups** | ${{ user.groups or 'sudo' }} |
+          | **Shell** | ${{ user.shell or '/bin/bash' }} |
+          | **SSH Keys** | ${{ user.ssh_authorized_keys | length }} key(s) |
+          {%- endfor %}
+
+          ## Additional Packages
+
+          ${{ 'No extra packages added.' if not parameters.packages else '' }}
+          {%- if parameters.packages %}
+          | # | Package |
+          |---|---------|
+          {%- for pkg in parameters.packages %}
+          | ${{ loop.index }} | `${{ pkg }}` |
+          {%- endfor %}
+          {%- endif %}
