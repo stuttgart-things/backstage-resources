@@ -17,7 +17,7 @@ Harvester, and auto-merges the PR on success.
 
 ```mermaid
 flowchart TD
-    A[Developer fills Backstage form] --> B[Resolve target name<br/>u22-dev / u25-dev / suse15-dev / rocky9-dev]
+    A[Developer fills Backstage form] --> B[Resolve target name<br/>u22-dev / u26-dev / suse15-dev / rocky9-dev]
     B --> C[Fetch existing packages.yaml + users.yaml<br/>from harvester repo]
     C --> D[Merge & de-duplicate<br/>existing + new]
     D --> E[Render packages.yaml / users.yaml / catalog-info.yaml]

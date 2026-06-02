@@ -21,19 +21,19 @@ spec:
           description: Select the base image for the packer build
           enum:
             - ubuntu22
-            - ubuntu25
+            - ubuntu26
             - opensuse-leap
             - rocky
           enumNames:
             - 🟠 Ubuntu 22.04 (Jammy)
-            - 🟠 Ubuntu 25.04 (Plucky)
+            - 🟠 Ubuntu 26.04 LTS
             - 🦎 openSUSE Leap 15.6
             - 🪨 Rocky Linux 9.7
           default: ubuntu22
         targetNameOverride:
           title: Target Name Override (optional)
           type: string
-          description: Leave empty to use the default name (u22-dev, u25-dev, suse15-dev, rocky9-dev)
+          description: Leave empty to use the default name (u22-dev, u26-dev, suse15-dev, rocky9-dev)
 
     - title: Add New Users
       description: |
@@ -103,7 +103,7 @@ spec:
           override: ${{ parameters.targetNameOverride }}
           mapping:
             ubuntu22: u22-dev
-            ubuntu25: u25-dev
+            ubuntu26: u26-dev
             opensuse-leap: suse15-dev
             rocky: rocky9-dev
         expression: "override != '' ? override : $lookup(mapping, baseImage)"
