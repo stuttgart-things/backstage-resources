@@ -188,6 +188,95 @@ layout: default
 </div>
 
 ---
+layout: section
+---
+
+# Part 2 — the Admin path
+
+Same engine, different governance: **hardened & staged** images
+
+---
+layout: default
+---
+
+# Two golden paths, one engine
+
+| | 🧑‍💻 Dev template | 🛡️ Admin template |
+|---|---|---|
+| **Audience** | Developers | Platform admins |
+| **Purpose** | Quick test VMs | Hardened, prod-bound images |
+| **Hardening** | none | CIS Level 1 / 2 + tooling |
+| **Stages** | `u26-dev` | `u26-staging` → `u26-prod` |
+| **PR flow** | auto-merge on green | **draft PR, 4-eyes review** |
+
+<div v-click class="mt-6 text-lg opacity-80">
+Self-service speed for devs · governed promotion for admins.
+</div>
+
+---
+layout: default
+---
+
+# Admin — Hardening
+
+In **Create Hardened Harvester VM-Template (Admin)**:
+
+<v-clicks>
+
+- Pick a **CIS profile** — Level 1 (baseline) or Level 2 (defense-in-depth)
+- Choose **security tooling** — `auditd`, `aide`, `fail2ban`, `unattended-upgrades`…
+- It's merged into the base package list and written to **`hardening.yaml`**
+
+</v-clicks>
+
+<div v-click class="mt-6 p-4 rounded border border-teal-500/40 bg-teal-500/10 text-sm">
+The Packer build reads <code>hardening.yaml</code> and applies the CIS benchmark — compliance as config, in Git.
+</div>
+
+---
+layout: default
+---
+
+# Admin — Staging & promotion
+
+```mermaid {scale: 0.7}
+flowchart LR
+    A[Stage: Staging] --> B[Build u26-staging]
+    B --> C[Validate<br/>boot + compliance scan]
+    C --> D[Re-run · Stage: Production]
+    D --> E[Build u26-prod]
+    E --> F[Promoted ✅]
+```
+
+<v-clicks>
+
+- Staging first — build and **validate** `u26-staging`
+- Same inputs, **Production** stage → `u26-prod`
+- The draft-PR diff is your **parity check** before promoting
+
+</v-clicks>
+
+---
+layout: default
+---
+
+# Admin — Review-gated
+
+<v-clicks>
+
+- The admin template opens a **draft Pull Request** — never auto-merged
+- A second admin **reviews** the hardening config and merges
+- Production is a **deliberate human gate**, not an accident
+
+</v-clicks>
+
+<div v-click class="mt-8 text-xl">
+Devs get <span class="text-teal-400">speed</span>.
+Admins get <span class="text-amber-400">control</span>.
+Same GitOps engine.
+</div>
+
+---
 layout: default
 ---
 
@@ -198,6 +287,8 @@ layout: default
 - 🧹 **Package de-dup** — `$distinct` merge, no duplicate entries
 - 👥 **User update semantics** — re-submitting a name updates, not duplicates
 - 🌿 **Concurrency-safe branches** — per-user PR branch names
+- 🟠 **Ubuntu 26.04 LTS** — replaced the obsolete interim release
+- 🛡️ **Admin template** — CIS hardening, staging→prod promotion, 4-eyes review
 - 📋 **Demo runbook + pre-flight checklist** — clean data, warm runner, green path
 
 </v-clicks>
@@ -211,6 +302,10 @@ layout: statement
 A **form** on one end. A **bootable, catalogued image** on the other.
 
 Everything between is **Git and CI** — governed, repeatable, self-service.
+
+<div class="pt-4 text-lg opacity-80">
+One engine, two paths: <span class="text-teal-400">speed</span> for devs · <span class="text-amber-400">control</span> for admins.
+</div>
 
 <div class="pt-8 opacity-60 text-base">
 Backstage · Packer · Harvester — stuttgart-things
