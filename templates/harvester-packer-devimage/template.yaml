@@ -113,17 +113,32 @@ spec:
       action: fetch:plain:file
       input:
         url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/packages.yaml
-        targetPath: ./packages.yaml
+        targetPath: ./packages-existing.yaml
 
-    - id: merge-packages
-      name: Merge New Packages
-      if: ${{ parameters.packages | length > 0 }}
-      action: roadiehq:utils:merge
+    - id: parse-existing-packages
+      name: Parse Existing Packages
+      action: utils:yaml:parse
       input:
-        path: ./packages.yaml
-        mergeArrays: true
-        content:
-          packages: ${{ parameters.packages }}
+        filePath: ./packages-existing.yaml
+
+    - id: combine-packages
+      name: Merge & Deduplicate Packages
+      action: roadiehq:utils:jsonata
+      input:
+        data:
+          existing: ${{ steps['parse-existing-packages'].output.content.packages | default([]) }}
+          new: ${{ parameters.packages | default([]) }}
+        # Concatenate existing + new packages and drop duplicates
+        expression: "$distinct($append(existing, new))"
+
+    - id: render-packages
+      name: Render Complete Packages File
+      action: fetch:template:file
+      input:
+        url: ./template/packages.yaml
+        targetPath: ./packages.yaml
+        values:
+          packages: ${{ steps['combine-packages'].output.result | default([]) }}
 
     - id: fetch-existing-users
       name: Fetch Existing Users
@@ -138,6 +153,17 @@ spec:
       input:
         filePath: ./users-existing.yaml
 
+    - id: combine-users
+      name: Merge & Deduplicate Users
+      action: roadiehq:utils:jsonata
+      input:
+        data:
+          existing: ${{ steps['parse-existing-users'].output.content.users | default([]) }}
+          new: ${{ parameters.users | default([]) }}
+        # Keep existing users whose name is NOT re-submitted, then append the
+        # new ones — so a re-submitted username updates instead of duplicating.
+        expression: "$append(existing[$not(name in new.name)], new)"
+
     - id: render-users
       name: Render Complete Users File
       action: fetch:template:file
@@ -145,8 +171,7 @@ spec:
         url: ./template/users-additions.yaml
         targetPath: ./users.yaml
         values:
-          existingUsers: ${{ steps['parse-existing-users'].output.content.users | default([]) }}
-          newUsers: ${{ parameters.users | default([]) }}
+          users: ${{ steps['combine-users'].output.result | default([]) }}
 
     - id: render-catalog
       name: Render Catalog Info
@@ -165,7 +190,7 @@ spec:
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: backstage/update-${{ steps['resolve-target-name'].output.result }}-config
+        branchName: backstage/update-${{ steps['resolve-target-name'].output.result }}-${{ user.entity.metadata.name | default('anon') }}-config
         update: true
         title: "Update ${{ steps['resolve-target-name'].output.result }} packer image config"
         description: |
