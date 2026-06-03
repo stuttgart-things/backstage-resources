@@ -1,0 +1,46 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ${{ values.targetName }}-packer-image
+  description: ${{ values.targetName }} hardened Packer image (${{ values.cisProfile }}, ${{ values.stage }})
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+  tags:
+    - harvester
+    - packer
+    - hardened
+    - ${{ values.baseImage }}
+    - ${{ values.cisProfile }}
+    - stage-${{ values.stage }}
+{%- if values.users | length > 0 %}
+    - users-customized
+{%- endif %}
+{%- if values.packages | length > 0 %}
+    - packages-customized
+{%- endif %}
+spec:
+  type: packer-image-hardened
+  lifecycle: ${{ values.stage }}
+  owner: platform-team
+  profile:
+    cisProfile: ${{ values.cisProfile }}
+    stage: ${{ values.stage }}
+{%- if values.tooling | length > 0 %}
+    securityTooling:
+{%- for tool in values.tooling %}
+      - ${{ tool }}
+{%- endfor %}
+{%- endif %}
+{%- if values.users | length > 0 %}
+    addedUsers:
+{%- for user in values.users %}
+      - ${{ user.name }}
+{%- endfor %}
+{%- endif %}
+{%- if values.packages | length > 0 %}
+    addedPackages:
+{%- for pkg in values.packages %}
+      - ${{ pkg }}
+{%- endfor %}
+{%- endif %}

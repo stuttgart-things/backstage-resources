@@ -1,13 +1,18 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: harvester-packer-devimage
-  title: Create Harvester VM-Template
-  description: Add packages and users to a packer image and create a PR to trigger the build pipeline
+  name: harvester-packer-adminimage
+  title: Create Hardened Harvester VM-Template (Admin)
+  description: >-
+    Build a CIS-hardened, stageable Packer image. Picks a hardening profile and
+    security tooling, targets a staging or production stage, and opens a
+    review-gated (draft) PR — no auto-merge. For platform admins.
   tags:
     - harvester
     - packer
     - infrastructure
+    - hardening
+    - admin
 spec:
   owner: platform-team
   type: service
@@ -18,7 +23,7 @@ spec:
         baseImage:
           title: Base Image
           type: string
-          description: Select the base image for the packer build
+          description: Select the base image to harden
           enum:
             - ubuntu22
             - ubuntu26
@@ -33,7 +38,61 @@ spec:
         targetNameOverride:
           title: Target Name Override (optional)
           type: string
-          description: Leave empty to use the default name (u22-dev, u26-dev, suse15-dev, rocky9-dev)
+          description: >-
+            Leave empty to use the stage-derived name
+            (e.g. u26-staging / u26-prod).
+
+    - title: Hardening
+      description: |
+        Apply a CIS Benchmark profile and bake in security tooling. The base
+        image's existing packages/users are preserved and merged.
+      properties:
+        cisProfile:
+          title: CIS Hardening Profile
+          type: string
+          description: CIS Benchmark profile applied during the Packer build
+          enum:
+            - cis-level1-server
+            - cis-level2-server
+          enumNames:
+            - 🛡️ CIS Level 1 – Server (baseline hardening)
+            - 🛡️ CIS Level 2 – Server (defense-in-depth)
+          default: cis-level1-server
+        securityTooling:
+          title: Security Tooling
+          type: array
+          description: >-
+            Hardening / monitoring packages baked into the image
+            (merged & de-duplicated with the base package list).
+          default:
+            - auditd
+            - aide
+            - fail2ban
+            - unattended-upgrades
+          items:
+            type: string
+          ui:options:
+            addable: true
+            orderable: false
+            removable: true
+
+    - title: Stage
+      description: |
+        Staging images are built first for validation. Re-run this template with
+        the **Production** stage to promote — the production build is gated by a
+        human review (draft PR, no auto-merge).
+      properties:
+        stage:
+          title: Target Stage
+          type: string
+          description: Which stage to build for
+          enum:
+            - staging
+            - production
+          enumNames:
+            - 🟡 Staging (build & validate first)
+            - 🟢 Production (promotion — requires review)
+          default: staging
 
     - title: Add New Users
       description: |
@@ -100,16 +159,21 @@ spec:
       input:
         data:
           baseImage: ${{ parameters.baseImage }}
+          stage: ${{ parameters.stage }}
           override: ${{ parameters.targetNameOverride }}
-          mapping:
-            ubuntu22: u22-dev
-            ubuntu26: u26-dev
-            opensuse-leap: suse15-dev
-            rocky: rocky9-dev
-        expression: "override != '' ? override : $lookup(mapping, baseImage)"
+          baseMap:
+            ubuntu22: u22
+            ubuntu26: u26
+            opensuse-leap: suse15
+            rocky: rocky9
+          stageMap:
+            staging: staging
+            production: prod
+        # <baseShort>-<stageSuffix>, e.g. u26-staging / u26-prod
+        expression: "override != '' ? override : $lookup(baseMap, baseImage) & '-' & $lookup(stageMap, stage)"
 
     - id: fetch-existing-packages
-      name: Fetch Existing Packages
+      name: Fetch Existing Packages (seed from base image)
       action: fetch:plain:file
       input:
         url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/packages.yaml
@@ -127,9 +191,10 @@ spec:
       input:
         data:
           existing: ${{ steps['parse-existing-packages'].output.content.packages | default([]) }}
+          tooling: ${{ parameters.securityTooling | default([]) }}
           new: ${{ parameters.packages | default([]) }}
-        # Concatenate existing + new packages and drop duplicates
-        expression: "$distinct($append(existing, new))"
+        # base packages + security tooling + admin additions, de-duplicated
+        expression: "$distinct($append($append(existing, tooling), new))"
 
     - id: render-packages
       name: Render Complete Packages File
@@ -141,7 +206,7 @@ spec:
           packages: ${{ steps['combine-packages'].output.result | default([]) }}
 
     - id: fetch-existing-users
-      name: Fetch Existing Users
+      name: Fetch Existing Users (seed from base image)
       action: fetch:plain:file
       input:
         url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/users.yaml
@@ -173,6 +238,17 @@ spec:
         values:
           users: ${{ steps['combine-users'].output.result | default([]) }}
 
+    - id: render-hardening
+      name: Render Hardening Config
+      action: fetch:template:file
+      input:
+        url: ./template/hardening.yaml
+        targetPath: ./hardening.yaml
+        values:
+          cisProfile: ${{ parameters.cisProfile }}
+          stage: ${{ parameters.stage }}
+          tooling: ${{ parameters.securityTooling | default([]) }}
+
     - id: render-catalog
       name: Render Catalog Info
       action: fetch:template:file
@@ -182,35 +258,49 @@ spec:
         values:
           users: ${{ parameters.users }}
           packages: ${{ parameters.packages }}
+          tooling: ${{ parameters.securityTooling | default([]) }}
+          cisProfile: ${{ parameters.cisProfile }}
+          stage: ${{ parameters.stage }}
           baseImage: ${{ parameters.baseImage }}
           targetName: ${{ steps['resolve-target-name'].output.result }}
 
     - id: create-pull-request
-      name: Create Pull Request
+      name: Create Pull Request (review-gated draft)
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: backstage/update-${{ steps['resolve-target-name'].output.result }}-${{ user.entity.metadata.name | default('anon') }}-config
+        branchName: backstage/harden-${{ steps['resolve-target-name'].output.result }}-${{ user.entity.metadata.name | default('anon') }}-config
+        draft: true
         update: true
-        title: "Update ${{ steps['resolve-target-name'].output.result }} packer image config"
+        title: "[HARDENED] ${{ steps['resolve-target-name'].output.result }} (${{ parameters.cisProfile }}) — ${{ parameters.stage }}"
         description: |
-          ## Packer Image Config Update (${{ steps['resolve-target-name'].output.result }})
+          ## 🛡️ Hardened Packer Image — ${{ steps['resolve-target-name'].output.result }}
 
-          Updated via Backstage software template.
+          | Field | Value |
+          |-------|-------|
+          | **Target** | `${{ steps['resolve-target-name'].output.result }}` |
+          | **Base Image** | `${{ parameters.baseImage }}` |
+          | **CIS Profile** | `${{ parameters.cisProfile }}` |
+          | **Stage** | `${{ parameters.stage }}` |
 
-          Review the changes in the files tab.
-        targetPath: packer/${{ parameters.baseImage }}
+          Generated via the Backstage **admin** hardening template.
+
+          > ⚠️ **Review-gated:** this PR is opened as a **draft** and must NOT be
+          > auto-merged. A platform admin reviews the hardening config and merges
+          > manually. For a Production promotion, confirm the staging image was
+          > validated first.
+        targetPath: packer/${{ steps['resolve-target-name'].output.result }}
 
     - id: register
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ steps['resolve-target-name'].output.result }}/catalog-info.yaml
         optional: true
 
   output:
     links:
-      - title: Pull Request
+      - title: Pull Request (draft — needs review)
         icon: github
         url: ${{ steps['create-pull-request'].output.remoteUrl }}
       - title: Open in Catalog
@@ -219,10 +309,14 @@ spec:
     text:
       - title: Next Steps
         content: |
-          PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
-          The packer build pipeline will trigger automatically.
-          On success, the PR will be auto-merged.
-      - title: Catalog Resource Preview
+          Draft PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
+
+          1. A platform admin reviews the hardening config (`hardening.yaml`).
+          2. Mark the PR ready & merge — the Packer build runs and uploads the
+             `${{ steps['resolve-target-name'].output.result }}` image to Harvester.
+          3. To promote ${{ 'this staging image to production' if parameters.stage == 'staging' else 'further' }},
+             re-run this template with the **Production** stage.
+      - title: Hardened Image Preview
         content: | #pragma: allowlist secret
           ## Catalog Entity
 
@@ -230,10 +324,22 @@ spec:
           |-------|-------|
           | **Name** | ${{ steps['resolve-target-name'].output.result }}-packer-image |
           | **Kind** | Resource |
-          | **Type** | packer-image |
-          | **Lifecycle** | production |
+          | **Type** | packer-image-hardened |
+          | **Lifecycle** | ${{ parameters.stage }} |
+          | **CIS Profile** | ${{ parameters.cisProfile }} |
           | **Owner** | platform-team |
           | **Base Image** | ${{ parameters.baseImage }} |
+
+          ## Security Tooling
+
+          ${{ 'No tooling selected.' if not parameters.securityTooling else '' }}
+          {%- if parameters.securityTooling %}
+          | # | Package |
+          |---|---------|
+          {%- for tool in parameters.securityTooling %}
+          | ${{ loop.index }} | `${{ tool }}` |
+          {%- endfor %}
+          {%- endif %}
 
           ## Users
 
@@ -245,17 +351,12 @@ spec:
           |---------|-------|
           | **Groups** | ${{ user.groups or 'sudo' }} |
           | **Shell** | ${{ user.shell or '/bin/bash' }} |
-          | **Sudo** | ${{ user.sudo or 'ALL=(ALL) NOPASSWD:ALL' }} | # pragma: allowlist secret
           | **SSH Keys** | ${{ user.ssh_authorized_keys | length }} key(s) |
-          {%- for key in user.ssh_authorized_keys %}
-          - `${{ key[:50] }}...`
           {%- endfor %}
 
-          {%- endfor %}
+          ## Additional Packages
 
-          ## Packages
-
-          ${{ 'No new packages added.' if not parameters.packages else '' }}
+          ${{ 'No extra packages added.' if not parameters.packages else '' }}
           {%- if parameters.packages %}
           | # | Package |
           |---|---------|
