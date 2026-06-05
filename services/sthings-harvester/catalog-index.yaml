@@ -1,0 +1,83 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: stuttgart-things-services
+  description: All stuttgart-things services
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/claim-machinery-api/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/sthings-backstage/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/blueprints/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/tasks/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/harvester/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-core-catcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-demo-pitcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-git-pitcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-k8s-pitcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-led-catcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-light-catcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun2-omni-pitcher/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/homerun-library/blob/main/catalog-info.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: claim-machinery-templates
+  description: Claim Machinery software templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/claim-to-pull-request/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: golang-service-templates
+  description: Go Service software templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/golang-service/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: harvester-packer-templates
+  description: Harvester Packer software templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/harvester-packer-devimage/template.yaml
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/harvester-packer-adminimage/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: homerun2-service-templates
+  description: Homerun2 microservice templates (pitcher/catcher)
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/homerun2-service/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: flux-bootstrap-templates
+  description: Flux bootstrap, check, and destroy templates
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/flux-bootstrap/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: create-argocd-cluster-templates
+  description: ArgoCD cluster registration templates (clusterbook)
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/create-argocd-cluster/template.yaml
