@@ -1,8 +1,8 @@
-# Hardening configuration consumed by the Packer build pipeline.
-# The build applies the CIS profile and ensures the listed tooling is present.
+# Hardening configuration for the golden image build pipeline.
+# NOTE: CIS profile enforcement is not yet consumed by packer/_build (issue #93);
+# the security tooling below is installed via the merged packages.yaml.
 hardening:
   cisProfile: ${{ values.cisProfile }}
-  stage: ${{ values.stage }}
   tooling:
 {%- for tool in values.tooling %}
     - ${{ tool }}

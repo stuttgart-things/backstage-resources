@@ -2,12 +2,16 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: harvester-packer-devimage
-  title: Create Harvester VM-Template
-  description: Add packages and users to a packer image and create a PR to trigger the build pipeline
+  title: Create Harvester Dev Image
+  description: >-
+    Self-service playground image. Add your SSH key and the packages you need to a
+    dev image (layered on the curated golden base) — opens an auto-merging PR that
+    builds and uploads to Harvester. No review gate.
   tags:
     - harvester
     - packer
-    - infrastructure
+    - dev
+    - playground
 spec:
   owner: platform-team
   type: service
@@ -18,32 +22,25 @@ spec:
         baseImage:
           title: Base Image
           type: string
-          description: Select the base image for the packer build
+          description: >-
+            Golden base to layer your dev image on. (Only images with a golden +
+            dev pair are listed; add more golden images to extend this list.)
           enum:
-            - ubuntu22
             - ubuntu26
-            - opensuse-leap
-            - rocky
           enumNames:
-            - 🟠 Ubuntu 22.04 (Jammy)
-            - 🟠 Ubuntu 26.04 LTS
-            - 🦎 openSUSE Leap 15.6
-            - 🪨 Rocky Linux 9.7
-          default: ubuntu22
-        targetNameOverride:
-          title: Target Name Override (optional)
-          type: string
-          description: Leave empty to use the default name (u22-dev, u26-dev, suse15-dev, rocky9-dev)
+            - 🟠 Ubuntu 26.04 LTS (golden sthings-u26 → dev u26-dev)
+          default: ubuntu26
 
     - title: Add New Users
       description: |
-        Existing users from the selected base image will be preserved.
+        Add yourself (or others) to the shared dev image. Existing users are
+        preserved; re-submitting a username updates it instead of duplicating.
       properties:
         users:
           title: Add New Users
           type: array
-          description: New users to add to the image (existing users are preserved)
-          ui:help: "View users at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
+          description: New users to add to the dev image (existing users are preserved)
+          ui:help: "View users at: https://github.com/stuttgart-things/harvester/tree/main/packer/dev/"
           default: []
           items:
             type: object
@@ -78,13 +75,13 @@ spec:
 
     - title: Additional Packages
       description: |
-        Existing packages from the selected base image will be preserved.
+        Existing packages on the dev image will be preserved.
       properties:
         packages:
           title: Additional Packages
           type: array
-          description: New packages to add to the image (existing packages are preserved)
-          ui:help: "View packages at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
+          description: New packages to add to the dev image (existing packages are preserved)
+          ui:help: "View packages at: https://github.com/stuttgart-things/harvester/tree/main/packer/dev/"
           default: []
           items:
             type: string
@@ -94,25 +91,25 @@ spec:
             removable: true
 
   steps:
-    - id: resolve-target-name
-      name: Resolve Target Name
+    - id: resolve-target
+      name: Resolve Dev Target
       action: roadiehq:utils:jsonata
       input:
         data:
           baseImage: ${{ parameters.baseImage }}
-          override: ${{ parameters.targetNameOverride }}
-          mapping:
-            ubuntu22: u22-dev
+          # baseImage -> { dev folder/image name, golden base it layers on }
+          devMap:
             ubuntu26: u26-dev
-            opensuse-leap: suse15-dev
-            rocky: rocky9-dev
-        expression: "override != '' ? override : $lookup(mapping, baseImage)"
+          goldenMap:
+            ubuntu26: sthings-u26
+        # Returns { devName, goldenBase } — referenced as result.devName / result.goldenBase
+        expression: "{ 'devName': $lookup(devMap, baseImage), 'goldenBase': $lookup(goldenMap, baseImage) }"
 
     - id: fetch-existing-packages
       name: Fetch Existing Packages
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/packages.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/dev/${{ steps['resolve-target'].output.result.devName }}/packages.yaml
         targetPath: ./packages-existing.yaml
 
     - id: parse-existing-packages
@@ -144,7 +141,7 @@ spec:
       name: Fetch Existing Users
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/users.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/dev/${{ steps['resolve-target'].output.result.devName }}/users.yaml
         targetPath: ./users-existing.yaml
 
     - id: parse-existing-users
@@ -183,29 +180,30 @@ spec:
           users: ${{ parameters.users }}
           packages: ${{ parameters.packages }}
           baseImage: ${{ parameters.baseImage }}
-          targetName: ${{ steps['resolve-target-name'].output.result }}
+          goldenBase: ${{ steps['resolve-target'].output.result.goldenBase }}
+          targetName: ${{ steps['resolve-target'].output.result.devName }}
 
     - id: create-pull-request
       name: Create Pull Request
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: backstage/update-${{ steps['resolve-target-name'].output.result }}-${{ user.entity.metadata.name | default('anon') }}-config
+        branchName: backstage/update-${{ steps['resolve-target'].output.result.devName }}-${{ user.entity.metadata.name | default('anon') }}-config
         update: true
-        title: "Update ${{ steps['resolve-target-name'].output.result }} packer image config"
+        title: "Update ${{ steps['resolve-target'].output.result.devName }} dev image config"
         description: |
-          ## Packer Image Config Update (${{ steps['resolve-target-name'].output.result }})
+          ## Dev Image Config Update (${{ steps['resolve-target'].output.result.devName }})
 
-          Updated via Backstage software template.
+          Self-service update via Backstage — layered on golden `${{ steps['resolve-target'].output.result.goldenBase }}`.
 
-          Review the changes in the files tab.
-        targetPath: packer/${{ parameters.baseImage }}
+          Auto-merges on a green build.
+        targetPath: packer/dev/${{ steps['resolve-target'].output.result.devName }}
 
     - id: register
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/dev/${{ steps['resolve-target'].output.result.devName }}/catalog-info.yaml
         optional: true
 
   output:
@@ -220,20 +218,21 @@ spec:
       - title: Next Steps
         content: |
           PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
-          The packer build pipeline will trigger automatically.
-          On success, the PR will be auto-merged.
+          The packer build pipeline triggers automatically and, on success, the
+          PR auto-merges and the `${{ steps['resolve-target'].output.result.devName }}` image is uploaded to Harvester.
       - title: Catalog Resource Preview
         content: | #pragma: allowlist secret
           ## Catalog Entity
 
           | Field | Value |
           |-------|-------|
-          | **Name** | ${{ steps['resolve-target-name'].output.result }}-packer-image |
+          | **Name** | ${{ steps['resolve-target'].output.result.devName }}-packer-image |
           | **Kind** | Resource |
-          | **Type** | packer-image |
-          | **Lifecycle** | production |
+          | **Type** | packer-image-dev |
+          | **Lifecycle** | experimental |
           | **Owner** | platform-team |
           | **Base Image** | ${{ parameters.baseImage }} |
+          | **Golden Base** | ${{ steps['resolve-target'].output.result.goldenBase }} |
 
           ## Users
 

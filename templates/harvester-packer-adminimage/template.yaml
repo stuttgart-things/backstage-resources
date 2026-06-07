@@ -2,15 +2,15 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: harvester-packer-adminimage
-  title: Create Hardened Harvester VM-Template (Admin)
+  title: Curate Harvester Golden Image (Admin)
   description: >-
-    Build a CIS-hardened, stageable Packer image. Picks a hardening profile and
-    security tooling, targets a staging or production stage, and opens a
-    review-gated (draft) PR — no auto-merge. For platform admins.
+    Curate the trusted golden base image — its users, packages and (optional)
+    CIS hardening. Opens a review-gated DRAFT PR (no auto-merge); a platform admin
+    reviews and merges. For platform admins.
   tags:
     - harvester
     - packer
-    - infrastructure
+    - golden
     - hardening
     - admin
 spec:
@@ -18,57 +18,45 @@ spec:
   type: service
 
   parameters:
-    - title: Base Image
+    - title: Golden Base Image
       properties:
         baseImage:
-          title: Base Image
+          title: Golden Base Image
           type: string
-          description: Select the base image to harden
+          description: Which golden base image to curate
           enum:
-            - ubuntu22
             - ubuntu26
-            - opensuse-leap
-            - rocky
           enumNames:
-            - 🟠 Ubuntu 22.04 (Jammy)
-            - 🟠 Ubuntu 26.04 LTS
-            - 🦎 openSUSE Leap 15.6
-            - 🪨 Rocky Linux 9.7
-          default: ubuntu22
-        targetNameOverride:
-          title: Target Name Override (optional)
-          type: string
-          description: >-
-            Leave empty to use the stage-derived name
-            (e.g. u26-staging / u26-prod).
+            - 🟠 Ubuntu 26.04 LTS (sthings-u26)
+          default: ubuntu26
 
     - title: Hardening
       description: |
-        Apply a CIS Benchmark profile and bake in security tooling. The base
-        image's existing packages/users are preserved and merged.
+        Optional CIS Benchmark profile + security tooling baked into the golden
+        image. The image's existing packages/users are preserved and merged.
+        NOTE: CIS profile enforcement is not yet wired into the build pipeline
+        (tracked in issue #93); the security tooling packages ARE installed.
       properties:
         cisProfile:
           title: CIS Hardening Profile
           type: string
-          description: CIS Benchmark profile applied during the Packer build
+          description: CIS Benchmark profile recorded for the build pipeline
           enum:
+            - none
             - cis-level1-server
             - cis-level2-server
           enumNames:
+            - ⚪ None
             - 🛡️ CIS Level 1 – Server (baseline hardening)
             - 🛡️ CIS Level 2 – Server (defense-in-depth)
-          default: cis-level1-server
+          default: none
         securityTooling:
           title: Security Tooling
           type: array
           description: >-
             Hardening / monitoring packages baked into the image
             (merged & de-duplicated with the base package list).
-          default:
-            - auditd
-            - aide
-            - fail2ban
-            - unattended-upgrades
+          default: []
           items:
             type: string
           ui:options:
@@ -76,33 +64,15 @@ spec:
             orderable: false
             removable: true
 
-    - title: Stage
-      description: |
-        Staging images are built first for validation. Re-run this template with
-        the **Production** stage to promote — the production build is gated by a
-        human review (draft PR, no auto-merge).
-      properties:
-        stage:
-          title: Target Stage
-          type: string
-          description: Which stage to build for
-          enum:
-            - staging
-            - production
-          enumNames:
-            - 🟡 Staging (build & validate first)
-            - 🟢 Production (promotion — requires review)
-          default: staging
-
     - title: Add New Users
       description: |
-        Existing users from the selected base image will be preserved.
+        Existing golden users will be preserved.
       properties:
         users:
           title: Add New Users
           type: array
-          description: New users to add to the image (existing users are preserved)
-          ui:help: "View users at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
+          description: New users to add to the golden image (existing users are preserved)
+          ui:help: "View users at: https://github.com/stuttgart-things/harvester/tree/main/packer/golden/"
           default: []
           items:
             type: object
@@ -137,13 +107,13 @@ spec:
 
     - title: Additional Packages
       description: |
-        Existing packages from the selected base image will be preserved.
+        Existing golden packages will be preserved.
       properties:
         packages:
           title: Additional Packages
           type: array
-          description: New packages to add to the image (existing packages are preserved)
-          ui:help: "View packages at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
+          description: New packages to add to the golden image (existing packages are preserved)
+          ui:help: "View packages at: https://github.com/stuttgart-things/harvester/tree/main/packer/golden/"
           default: []
           items:
             type: string
@@ -153,30 +123,22 @@ spec:
             removable: true
 
   steps:
-    - id: resolve-target-name
-      name: Resolve Target Name
+    - id: resolve-target
+      name: Resolve Golden Target
       action: roadiehq:utils:jsonata
       input:
         data:
           baseImage: ${{ parameters.baseImage }}
-          stage: ${{ parameters.stage }}
-          override: ${{ parameters.targetNameOverride }}
-          baseMap:
-            ubuntu22: u22
-            ubuntu26: u26
-            opensuse-leap: suse15
-            rocky: rocky9
-          stageMap:
-            staging: staging
-            production: prod
-        # <baseShort>-<stageSuffix>, e.g. u26-staging / u26-prod
-        expression: "override != '' ? override : $lookup(baseMap, baseImage) & '-' & $lookup(stageMap, stage)"
+          # baseImage -> golden image / folder name
+          goldenMap:
+            ubuntu26: sthings-u26
+        expression: "$lookup(goldenMap, baseImage)"
 
     - id: fetch-existing-packages
-      name: Fetch Existing Packages (seed from base image)
+      name: Fetch Existing Packages (golden)
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/packages.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/golden/${{ steps['resolve-target'].output.result }}/packages.yaml
         targetPath: ./packages-existing.yaml
 
     - id: parse-existing-packages
@@ -206,10 +168,10 @@ spec:
           packages: ${{ steps['combine-packages'].output.result | default([]) }}
 
     - id: fetch-existing-users
-      name: Fetch Existing Users (seed from base image)
+      name: Fetch Existing Users (golden)
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/users.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/golden/${{ steps['resolve-target'].output.result }}/users.yaml
         targetPath: ./users-existing.yaml
 
     - id: parse-existing-users
@@ -240,13 +202,13 @@ spec:
 
     - id: render-hardening
       name: Render Hardening Config
+      if: ${{ parameters.cisProfile != "none" or (parameters.securityTooling | length > 0) }}
       action: fetch:template:file
       input:
         url: ./template/hardening.yaml
         targetPath: ./hardening.yaml
         values:
           cisProfile: ${{ parameters.cisProfile }}
-          stage: ${{ parameters.stage }}
           tooling: ${{ parameters.securityTooling | default([]) }}
 
     - id: render-catalog
@@ -260,42 +222,42 @@ spec:
           packages: ${{ parameters.packages }}
           tooling: ${{ parameters.securityTooling | default([]) }}
           cisProfile: ${{ parameters.cisProfile }}
-          stage: ${{ parameters.stage }}
           baseImage: ${{ parameters.baseImage }}
-          targetName: ${{ steps['resolve-target-name'].output.result }}
+          targetName: ${{ steps['resolve-target'].output.result }}
 
     - id: create-pull-request
       name: Create Pull Request (review-gated draft)
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: backstage/harden-${{ steps['resolve-target-name'].output.result }}-${{ user.entity.metadata.name | default('anon') }}-config
+        branchName: backstage/golden-${{ steps['resolve-target'].output.result }}-${{ user.entity.metadata.name | default('anon') }}-config
         draft: true
         update: true
-        title: "[HARDENED] ${{ steps['resolve-target-name'].output.result }} (${{ parameters.cisProfile }}) — ${{ parameters.stage }}"
+        title: "[GOLDEN] Curate ${{ steps['resolve-target'].output.result }} (${{ parameters.cisProfile }})"
         description: |
-          ## 🛡️ Hardened Packer Image — ${{ steps['resolve-target-name'].output.result }}
+          ## 🛡️ Golden Image Curation — ${{ steps['resolve-target'].output.result }}
 
           | Field | Value |
           |-------|-------|
-          | **Target** | `${{ steps['resolve-target-name'].output.result }}` |
+          | **Target** | `${{ steps['resolve-target'].output.result }}` |
           | **Base Image** | `${{ parameters.baseImage }}` |
           | **CIS Profile** | `${{ parameters.cisProfile }}` |
-          | **Stage** | `${{ parameters.stage }}` |
 
-          Generated via the Backstage **admin** hardening template.
+          Generated via the Backstage **admin** golden-curation template.
 
-          > ⚠️ **Review-gated:** this PR is opened as a **draft** and must NOT be
-          > auto-merged. A platform admin reviews the hardening config and merges
-          > manually. For a Production promotion, confirm the staging image was
-          > validated first.
-        targetPath: packer/${{ steps['resolve-target-name'].output.result }}
+          > ⚠️ **Review-gated:** opened as a **draft** and must NOT be auto-merged.
+          > A platform admin reviews the change and merges manually. On merge the
+          > golden image is rebuilt and uploaded to Harvester.
+          >
+          > ℹ️ CIS profile enforcement is not yet wired into the build (issue #93);
+          > security-tooling packages are installed via the merged package list.
+        targetPath: packer/golden/${{ steps['resolve-target'].output.result }}
 
     - id: register
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ steps['resolve-target-name'].output.result }}/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/golden/${{ steps['resolve-target'].output.result }}/catalog-info.yaml
         optional: true
 
   output:
@@ -311,21 +273,20 @@ spec:
         content: |
           Draft PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
 
-          1. A platform admin reviews the hardening config (`hardening.yaml`).
+          1. A platform admin reviews the golden config (users / packages / hardening).
           2. Mark the PR ready & merge — the Packer build runs and uploads the
-             `${{ steps['resolve-target-name'].output.result }}` image to Harvester.
-          3. To promote ${{ 'this staging image to production' if parameters.stage == 'staging' else 'further' }},
-             re-run this template with the **Production** stage.
-      - title: Hardened Image Preview
+             `${{ steps['resolve-target'].output.result }}` golden image to Harvester.
+          3. Dev images layered on this golden pick up the change on their next build.
+      - title: Golden Image Preview
         content: | #pragma: allowlist secret
           ## Catalog Entity
 
           | Field | Value |
           |-------|-------|
-          | **Name** | ${{ steps['resolve-target-name'].output.result }}-packer-image |
+          | **Name** | ${{ steps['resolve-target'].output.result }}-packer-image |
           | **Kind** | Resource |
-          | **Type** | packer-image-hardened |
-          | **Lifecycle** | ${{ parameters.stage }} |
+          | **Type** | packer-image-golden |
+          | **Lifecycle** | production |
           | **CIS Profile** | ${{ parameters.cisProfile }} |
           | **Owner** | platform-team |
           | **Base Image** | ${{ parameters.baseImage }} |
