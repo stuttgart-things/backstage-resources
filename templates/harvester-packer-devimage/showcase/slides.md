@@ -128,7 +128,7 @@ layout: default
 <v-clicks>
 
 - The template opens a **Pull Request** on `stuttgart-things/harvester`
-- Diff lives in `packer/ubuntu22/` — `packages.yaml` + `users.yaml`
+- Diff lives in `packer/dev/u26-dev/` — `packages.yaml` + `users.yaml`
 - Branch is **namespaced per user** → no collisions
 
 </v-clicks>
@@ -169,7 +169,7 @@ layout: default
 
 <v-clicks>
 
-- New **`u22-dev`** image appears in **Harvester → Images**
+- New **`u26-dev`** image appears in **Harvester → Images**
 - Registered **Resource** in the Backstage catalog
 - Boot a VM from it — done
 
@@ -193,7 +193,7 @@ layout: section
 
 # Part 2 — the Admin path
 
-Same engine, different governance: **hardened & staged** images
+Same engine, different governance: **hardened golden** images
 
 ---
 layout: default
@@ -204,9 +204,9 @@ layout: default
 | | 🧑‍💻 Dev template | 🛡️ Admin template |
 |---|---|---|
 | **Audience** | Developers | Platform admins |
-| **Purpose** | Quick test VMs | Hardened, prod-bound images |
+| **Purpose** | Quick playground VMs | Hardened golden base images |
 | **Hardening** | none | CIS Level 1 / 2 + tooling |
-| **Stages** | `u26-dev` | `u26-staging` → `u26-prod` |
+| **Tier** | `packer/dev/u26-dev` | `packer/golden/sthings-u26` |
 | **PR flow** | auto-merge on green | **draft PR, 4-eyes review** |
 
 <div v-click class="mt-6 text-lg opacity-80">
@@ -219,40 +219,40 @@ layout: default
 
 # Admin — Hardening
 
-In **Create Hardened Harvester VM-Template (Admin)**:
+In **Curate Hardened Golden Harvester Image (Admin)**:
 
 <v-clicks>
 
 - Pick a **CIS profile** — Level 1 (baseline) or Level 2 (defense-in-depth)
 - Choose **security tooling** — `auditd`, `aide`, `fail2ban`, `unattended-upgrades`…
-- It's merged into the base package list and written to **`hardening.yaml`**
+- It's merged into the golden **`packages.yaml`**, with the profile recorded in `catalog-info.yaml`
 
 </v-clicks>
 
 <div v-click class="mt-6 p-4 rounded border border-teal-500/40 bg-teal-500/10 text-sm">
-The Packer build reads <code>hardening.yaml</code> and applies the CIS benchmark — compliance as config, in Git.
+The tooling lands in the golden image and the CIS profile is captured as catalog metadata — compliance intent, in Git.
 </div>
 
 ---
 layout: default
 ---
 
-# Admin — Staging & promotion
+# Admin — Golden publish flow
 
 ```mermaid {scale: 0.7}
 flowchart LR
-    A[Stage: Staging] --> B[Build u26-staging]
-    B --> C[Validate<br/>boot + compliance scan]
-    C --> D[Re-run · Stage: Production]
-    D --> E[Build u26-prod]
-    E --> F[Promoted ✅]
+    A[Draft PR · packer/golden/sthings-u26] --> B[PR build<br/>validate only]
+    B --> C[Admin review + merge to main]
+    C --> D[packer-build.yml rebuilds golden]
+    D --> E[Upload to Harvester<br/>+ republish base to S3]
+    E --> F[Dev images layer on it ✅]
 ```
 
 <v-clicks>
 
-- Staging first — build and **validate** `u26-staging`
-- Same inputs, **Production** stage → `u26-prod`
-- The draft-PR diff is your **parity check** before promoting
+- Golden PR build is **validation-only** — no upload, no auto-merge
+- A second admin **reviews** and merges; merge to `main` triggers the real build
+- Dev images **layer on** the republished golden base
 
 </v-clicks>
 
@@ -288,7 +288,7 @@ layout: default
 - 👥 **User update semantics** — re-submitting a name updates, not duplicates
 - 🌿 **Concurrency-safe branches** — per-user PR branch names
 - 🟠 **Ubuntu 26.04 LTS** — replaced the obsolete interim release
-- 🛡️ **Admin template** — CIS hardening, staging→prod promotion, 4-eyes review
+- 🛡️ **Admin template** — CIS hardening of golden bases, review-gated, 4-eyes review
 - 📋 **Demo runbook + pre-flight checklist** — clean data, warm runner, green path
 
 </v-clicks>

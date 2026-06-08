@@ -3,7 +3,7 @@ kind: Template
 metadata:
   name: harvester-packer-devimage
   title: Create Harvester VM-Template
-  description: Add packages and users to a packer image and create a PR to trigger the build pipeline
+  description: Add packages and users to a dev packer image and create a PR to trigger the build pipeline
   tags:
     - harvester
     - packer
@@ -18,32 +18,30 @@ spec:
         baseImage:
           title: Base Image
           type: string
-          description: Select the base image for the packer build
+          description: >-
+            Select the golden base the dev image layers on. The dev build
+            installs only the delta (your keys + extra packages) on top of it.
           enum:
-            - ubuntu22
             - ubuntu26
-            - opensuse-leap
             - rocky
           enumNames:
-            - 🟠 Ubuntu 22.04 (Jammy)
-            - 🟠 Ubuntu 26.04 LTS
-            - 🦎 openSUSE Leap 15.6
-            - 🪨 Rocky Linux 9.7
-          default: ubuntu22
+            - 🟠 Ubuntu 26.04 LTS (golden sthings-u26)
+            - 🪨 Rocky Linux 9 (golden sthings-rocky9)
+          default: ubuntu26
         targetNameOverride:
           title: Target Name Override (optional)
           type: string
-          description: Leave empty to use the default name (u22-dev, u26-dev, suse15-dev, rocky9-dev)
+          description: Leave empty to use the default dev name (u26-dev, rocky9-dev)
 
     - title: Add New Users
       description: |
-        Existing users from the selected base image will be preserved.
+        Existing users on the dev image will be preserved.
       properties:
         users:
           title: Add New Users
           type: array
           description: New users to add to the image (existing users are preserved)
-          ui:help: "View users at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
+          ui:help: "View dev images at: https://github.com/stuttgart-things/harvester/tree/main/packer/dev"
           default: []
           items:
             type: object
@@ -78,13 +76,13 @@ spec:
 
     - title: Additional Packages
       description: |
-        Existing packages from the selected base image will be preserved.
+        Existing packages on the dev image will be preserved.
       properties:
         packages:
           title: Additional Packages
           type: array
           description: New packages to add to the image (existing packages are preserved)
-          ui:help: "View packages at: https://github.com/stuttgart-things/harvester/tree/main/packer/"
+          ui:help: "View dev images at: https://github.com/stuttgart-things/harvester/tree/main/packer/dev"
           default: []
           items:
             type: string
@@ -94,25 +92,39 @@ spec:
             removable: true
 
   steps:
-    - id: resolve-target-name
-      name: Resolve Target Name
+    - id: resolve-names
+      name: Resolve Image Names
       action: roadiehq:utils:jsonata
       input:
         data:
           baseImage: ${{ parameters.baseImage }}
           override: ${{ parameters.targetNameOverride }}
-          mapping:
-            ubuntu22: u22-dev
+          golden:
+            ubuntu26: sthings-u26
+            rocky: sthings-rocky9
+          dev:
             ubuntu26: u26-dev
-            opensuse-leap: suse15-dev
             rocky: rocky9-dev
-        expression: "override != '' ? override : $lookup(mapping, baseImage)"
+          distroTag:
+            ubuntu26: ubuntu26
+            rocky: rocky
+          profileBase:
+            ubuntu26: ubuntu26
+            rocky: rocky9
+        # Resolve the golden base + dev target dir for the selected image.
+        expression: |
+          {
+            "goldenName": $lookup(golden, baseImage),
+            "devName": override != '' ? override : $lookup(dev, baseImage),
+            "distroTag": $lookup(distroTag, baseImage),
+            "profileBase": $lookup(profileBase, baseImage)
+          }
 
     - id: fetch-existing-packages
       name: Fetch Existing Packages
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/packages.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/dev/${{ steps['resolve-names'].output.result.devName }}/packages.yaml
         targetPath: ./packages-existing.yaml
 
     - id: parse-existing-packages
@@ -144,7 +156,7 @@ spec:
       name: Fetch Existing Users
       action: fetch:plain:file
       input:
-        url: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/users.yaml
+        url: https://github.com/stuttgart-things/harvester/blob/main/packer/dev/${{ steps['resolve-names'].output.result.devName }}/users.yaml
         targetPath: ./users-existing.yaml
 
     - id: parse-existing-users
@@ -173,6 +185,16 @@ spec:
         values:
           users: ${{ steps['combine-users'].output.result | default([]) }}
 
+    - id: render-pkrvars
+      name: Render Packer Var-File
+      action: fetch:template:file
+      input:
+        url: ./template/build.pkrvars.hcl
+        targetPath: ./build.pkrvars.hcl
+        values:
+          goldenName: ${{ steps['resolve-names'].output.result.goldenName }}
+          devName: ${{ steps['resolve-names'].output.result.devName }}
+
     - id: render-catalog
       name: Render Catalog Info
       action: fetch:template:file
@@ -182,30 +204,34 @@ spec:
         values:
           users: ${{ parameters.users }}
           packages: ${{ parameters.packages }}
-          baseImage: ${{ parameters.baseImage }}
-          targetName: ${{ steps['resolve-target-name'].output.result }}
+          goldenName: ${{ steps['resolve-names'].output.result.goldenName }}
+          devName: ${{ steps['resolve-names'].output.result.devName }}
+          distroTag: ${{ steps['resolve-names'].output.result.distroTag }}
+          profileBase: ${{ steps['resolve-names'].output.result.profileBase }}
 
     - id: create-pull-request
       name: Create Pull Request
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=stuttgart-things&repo=harvester
-        branchName: backstage/update-${{ steps['resolve-target-name'].output.result }}-${{ user.entity.metadata.name | default('anon') }}-config
+        branchName: backstage/dev-${{ steps['resolve-names'].output.result.devName }}-${{ user.entity.metadata.name | default('anon') }}-config
         update: true
-        title: "Update ${{ steps['resolve-target-name'].output.result }} packer image config"
+        title: "Update dev image ${{ steps['resolve-names'].output.result.devName }} (packer)"
         description: |
-          ## Packer Image Config Update (${{ steps['resolve-target-name'].output.result }})
+          ## Dev Packer Image Update (${{ steps['resolve-names'].output.result.devName }})
 
+          Self-service dev image layered on golden `${{ steps['resolve-names'].output.result.goldenName }}`.
           Updated via Backstage software template.
 
-          Review the changes in the files tab.
-        targetPath: packer/${{ parameters.baseImage }}
+          On a green build + upload, `packer-pr-build.yml` auto-merges this PR
+          (unless it also touches a golden image, which forces review).
+        targetPath: packer/dev/${{ steps['resolve-names'].output.result.devName }}
 
     - id: register
       name: Register in Catalog
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/${{ parameters.baseImage }}/catalog-info.yaml
+        catalogInfoUrl: https://github.com/stuttgart-things/harvester/blob/main/packer/dev/${{ steps['resolve-names'].output.result.devName }}/catalog-info.yaml
         optional: true
 
   output:
@@ -220,20 +246,20 @@ spec:
       - title: Next Steps
         content: |
           PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
-          The packer build pipeline will trigger automatically.
-          On success, the PR will be auto-merged.
+          The packer build pipeline (packer-pr-build.yml) builds + uploads the
+          dev image to Harvester, then auto-merges the PR on success.
       - title: Catalog Resource Preview
         content: | #pragma: allowlist secret
           ## Catalog Entity
 
           | Field | Value |
           |-------|-------|
-          | **Name** | ${{ steps['resolve-target-name'].output.result }}-packer-image |
+          | **Name** | ${{ steps['resolve-names'].output.result.devName }}-packer-image |
           | **Kind** | Resource |
-          | **Type** | packer-image |
-          | **Lifecycle** | production |
+          | **Type** | packer-image-dev |
+          | **Lifecycle** | experimental |
           | **Owner** | platform-team |
-          | **Base Image** | ${{ parameters.baseImage }} |
+          | **Golden Base** | ${{ steps['resolve-names'].output.result.goldenName }} |
 
           ## Users
 

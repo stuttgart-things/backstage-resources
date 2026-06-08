@@ -1,9 +1,0 @@
-# Hardening configuration consumed by the Packer build pipeline.
-# The build applies the CIS profile and ensures the listed tooling is present.
-hardening:
-  cisProfile: ${{ values.cisProfile }}
-  stage: ${{ values.stage }}
-  tooling:
-{%- for tool in values.tooling %}
-    - ${{ tool }}
-{%- endfor %}

@@ -2,14 +2,16 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: ${{ values.targetName }}-packer-image
-  description: ${{ values.targetName }} Packer Image for Harvester
+  name: ${{ values.devName }}-packer-image
+  description: ${{ values.devName }} self-service dev/playground Packer image, layered on golden ${{ values.goldenName }}
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
-    - ${{ values.baseImage }}
+    - dev
+    - playground
+    - ${{ values.distroTag }}
 {%- if values.users | length > 0 %}
     - users-customized
 {%- endif %}
@@ -17,12 +19,14 @@ metadata:
     - packages-customized
 {%- endif %}
 spec:
-  type: packer-image
-  lifecycle: production
+  type: packer-image-dev
+  lifecycle: experimental
   owner: platform-team
-{%- if values.users | length > 0 or values.packages | length > 0 %}
-  dependsOn: []
+  dependsOn:
+    - resource:default/${{ values.goldenName }}-packer-image
   profile:
+    baseImage: ${{ values.profileBase }}
+    goldenBase: ${{ values.goldenName }}
 {%- if values.users | length > 0 %}
     addedUsers:
 {%- for user in values.users %}
@@ -34,5 +38,4 @@ spec:
 {%- for pkg in values.packages %}
       - ${{ pkg }}
 {%- endfor %}
-{%- endif %}
 {%- endif %}
