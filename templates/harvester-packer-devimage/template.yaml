@@ -42,8 +42,10 @@ spec:
         users:
           title: Add New Users
           type: array
-          description: New users to add to the image (existing users are preserved)
-          ui:help: "View dev images at: https://github.com/stuttgart-things/harvester/tree/main/packer/dev"
+          description: >-
+            Optional — leave empty to change nothing. New users to add to the
+            image (existing users are preserved).
+            [Browse current dev images](https://github.com/stuttgart-things/harvester/tree/main/packer/dev).
           default: []
           items:
             type: object
@@ -83,8 +85,10 @@ spec:
         packages:
           title: Additional Packages
           type: array
-          description: New packages to add to the image (existing packages are preserved)
-          ui:help: "View dev images at: https://github.com/stuttgart-things/harvester/tree/main/packer/dev"
+          description: >-
+            Optional — leave empty to change nothing. New packages to add to the
+            image (existing packages are preserved).
+            [Browse current dev images](https://github.com/stuttgart-things/harvester/tree/main/packer/dev).
           default: []
           items:
             type: string
