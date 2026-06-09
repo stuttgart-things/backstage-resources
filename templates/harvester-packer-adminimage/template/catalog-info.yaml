@@ -2,17 +2,19 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: ${{ values.targetName }}-packer-image
-  description: ${{ values.targetName }} hardened Packer image (${{ values.cisProfile }}, ${{ values.stage }})
+  name: ${{ values.goldenName }}-packer-image
+  description: ${{ values.goldenName }} golden (curated, review-gated) Packer base image for Harvester, hardened with ${{ values.cisProfile }}
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
+    - golden
     - hardened
-    - ${{ values.baseImage }}
+{%- for tag in values.distroTags %}
+    - ${{ tag }}
+{%- endfor %}
     - ${{ values.cisProfile }}
-    - stage-${{ values.stage }}
 {%- if values.users | length > 0 %}
     - users-customized
 {%- endif %}
@@ -20,12 +22,13 @@ metadata:
     - packages-customized
 {%- endif %}
 spec:
-  type: packer-image-hardened
-  lifecycle: ${{ values.stage }}
+  type: packer-image-golden
+  lifecycle: production
   owner: platform-team
+  dependsOn: []
   profile:
+    baseImage: ${{ values.profileBase }}
     cisProfile: ${{ values.cisProfile }}
-    stage: ${{ values.stage }}
 {%- if values.tooling | length > 0 %}
     securityTooling:
 {%- for tool in values.tooling %}
