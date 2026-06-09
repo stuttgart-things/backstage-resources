@@ -76,8 +76,10 @@ spec:
         users:
           title: Add New Users
           type: array
-          description: New users to add to the image (existing users are preserved)
-          ui:help: "View golden images at: https://github.com/stuttgart-things/harvester/tree/main/packer/golden"
+          description: >-
+            Optional — leave empty to change nothing. New users to add to the
+            image (existing users are preserved).
+            [Browse current golden images](https://github.com/stuttgart-things/harvester/tree/main/packer/golden).
           default: []
           items:
             type: object
@@ -117,8 +119,10 @@ spec:
         packages:
           title: Additional Packages
           type: array
-          description: New packages to add to the image (existing packages are preserved)
-          ui:help: "View golden images at: https://github.com/stuttgart-things/harvester/tree/main/packer/golden"
+          description: >-
+            Optional — leave empty to change nothing. New packages to add to the
+            image (existing packages are preserved).
+            [Browse current golden images](https://github.com/stuttgart-things/harvester/tree/main/packer/golden).
           default: []
           items:
             type: string
