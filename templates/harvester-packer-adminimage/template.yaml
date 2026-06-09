@@ -28,9 +28,11 @@ spec:
           enum:
             - ubuntu26
             - rocky
+            - leap
           enumNames:
             - 🟠 Ubuntu 26.04 LTS (golden sthings-u26)
             - 🪨 Rocky Linux 9 (golden sthings-rocky9)
+            - 🦎 openSUSE Leap 15.6 (golden sthings-leap)
           default: ubuntu26
 
     - title: Hardening
@@ -135,16 +137,19 @@ spec:
           golden:
             ubuntu26: sthings-u26
             rocky: sthings-rocky9
-          distroTag:
-            ubuntu26: ubuntu26
-            rocky: rocky
+            leap: sthings-leap
+          distroTags:
+            ubuntu26: [ubuntu26]
+            rocky: [rocky]
+            leap: [opensuse, leap]
           profileBase:
             ubuntu26: ubuntu26
             rocky: rocky9
+            leap: leap15
         expression: |
           {
             "goldenName": $lookup(golden, baseImage),
-            "distroTag": $lookup(distroTag, baseImage),
+            "distroTags": $lookup(distroTags, baseImage),
             "profileBase": $lookup(profileBase, baseImage)
           }
 
@@ -226,7 +231,7 @@ spec:
           tooling: ${{ parameters.securityTooling | default([]) }}
           cisProfile: ${{ parameters.cisProfile }}
           goldenName: ${{ steps['resolve-names'].output.result.goldenName }}
-          distroTag: ${{ steps['resolve-names'].output.result.distroTag }}
+          distroTags: ${{ steps['resolve-names'].output.result.distroTags }}
           profileBase: ${{ steps['resolve-names'].output.result.profileBase }}
 
     - id: create-pull-request

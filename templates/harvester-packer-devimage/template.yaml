@@ -24,14 +24,16 @@ spec:
           enum:
             - ubuntu26
             - rocky
+            - leap
           enumNames:
             - 🟠 Ubuntu 26.04 LTS (golden sthings-u26)
             - 🪨 Rocky Linux 9 (golden sthings-rocky9)
+            - 🦎 openSUSE Leap 15.6 (golden sthings-leap)
           default: ubuntu26
         targetNameOverride:
           title: Target Name Override (optional)
           type: string
-          description: Leave empty to use the default dev name (u26-dev, rocky9-dev)
+          description: Leave empty to use the default dev name (u26-dev, rocky9-dev, leap-dev)
 
     - title: Add New Users
       description: |
@@ -102,21 +104,25 @@ spec:
           golden:
             ubuntu26: sthings-u26
             rocky: sthings-rocky9
+            leap: sthings-leap
           dev:
             ubuntu26: u26-dev
             rocky: rocky9-dev
-          distroTag:
-            ubuntu26: ubuntu26
-            rocky: rocky
+            leap: leap-dev
+          distroTags:
+            ubuntu26: [ubuntu26]
+            rocky: [rocky]
+            leap: [opensuse, leap]
           profileBase:
             ubuntu26: ubuntu26
             rocky: rocky9
+            leap: leap15
         # Resolve the golden base + dev target dir for the selected image.
         expression: |
           {
             "goldenName": $lookup(golden, baseImage),
             "devName": override != '' ? override : $lookup(dev, baseImage),
-            "distroTag": $lookup(distroTag, baseImage),
+            "distroTags": $lookup(distroTags, baseImage),
             "profileBase": $lookup(profileBase, baseImage)
           }
 
@@ -206,7 +212,7 @@ spec:
           packages: ${{ parameters.packages }}
           goldenName: ${{ steps['resolve-names'].output.result.goldenName }}
           devName: ${{ steps['resolve-names'].output.result.devName }}
-          distroTag: ${{ steps['resolve-names'].output.result.distroTag }}
+          distroTags: ${{ steps['resolve-names'].output.result.distroTags }}
           profileBase: ${{ steps['resolve-names'].output.result.profileBase }}
 
     - id: create-pull-request

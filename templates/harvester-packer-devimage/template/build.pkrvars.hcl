@@ -22,4 +22,8 @@ qemuargs = [
   ["-machine", "type=q35,accel=kvm"],
   ["-cpu", "host"],
 ]
+{%- elif 'leap' in values.goldenName %}
+
+# openSUSE-specific override (the golden base still logs in as the 'opensuse' user).
+ssh_username = "opensuse"
 {%- endif %}

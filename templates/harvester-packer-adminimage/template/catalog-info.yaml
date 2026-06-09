@@ -11,7 +11,9 @@ metadata:
     - packer
     - golden
     - hardened
-    - ${{ values.distroTag }}
+{%- for tag in values.distroTags %}
+    - ${{ tag }}
+{%- endfor %}
     - ${{ values.cisProfile }}
 {%- if values.users | length > 0 %}
     - users-customized

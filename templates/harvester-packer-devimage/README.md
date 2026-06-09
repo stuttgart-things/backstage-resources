@@ -19,7 +19,7 @@ which builds the image, uploads it to Harvester, and **auto-merges** the PR on s
 
 ```mermaid
 flowchart TD
-    A[Developer fills Backstage form] --> B[Resolve names<br/>dev: u26-dev / rocky9-dev<br/>golden: sthings-u26 / sthings-rocky9]
+    A[Developer fills Backstage form] --> B[Resolve names<br/>dev: u26-dev / rocky9-dev / leap-dev<br/>golden: sthings-u26 / sthings-rocky9 / sthings-leap]
     B --> C[Fetch existing packages.yaml + users.yaml<br/>from packer/dev/&lt;name&gt;]
     C --> D[Merge & de-duplicate<br/>existing + new]
     D --> E[Render packages.yaml / users.yaml<br/>build.pkrvars.hcl / catalog-info.yaml]

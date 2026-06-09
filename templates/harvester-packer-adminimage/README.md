@@ -11,7 +11,7 @@
 | Tier | `packer/dev/<name>/` | `packer/golden/<name>/` |
 | Purpose | Quick playground VMs | Curated, hardened golden base images |
 | Hardening | none | CIS Level 1 / Level 2 profile + security tooling |
-| Target name | `u26-dev` / `rocky9-dev` | `sthings-u26` / `sthings-rocky9` |
+| Target name | `u26-dev` / `rocky9-dev` / `leap-dev` | `sthings-u26` / `sthings-rocky9` / `sthings-leap` |
 | PR flow | auto-merge on green | **draft PR, manual review & merge** |
 
 ---
@@ -29,7 +29,7 @@ the base to S3 so dev images can layer on it.
 ```mermaid
 flowchart TD
     A[Admin fills Backstage form] --> B[Pick golden base + CIS profile]
-    B --> C[Resolve golden name<br/>sthings-u26 / sthings-rocky9]
+    B --> C[Resolve golden name<br/>sthings-u26 / sthings-rocky9 / sthings-leap]
     C --> D[Seed packages/users from the golden image]
     D --> E[Merge security tooling + admin additions<br/>de-duplicated]
     E --> F[Render packages / users / catalog-info]
@@ -44,7 +44,7 @@ flowchart TD
 
 | Group | Field | Notes |
 |---|---|---|
-| Golden Base Image | `baseImage` | ubuntu26 (sthings-u26) / rocky (sthings-rocky9) |
+| Golden Base Image | `baseImage` | ubuntu26 (sthings-u26) / rocky (sthings-rocky9) / leap (sthings-leap) |
 | Hardening | `cisProfile` | CIS Level 1 (baseline) or Level 2 (defense-in-depth) |
 | Hardening | `securityTooling` | Packages baked in (default: auditd, aide, fail2ban, unattended-upgrades) |
 | Users | `users` | Same merge/de-dup semantics as the dev template |
