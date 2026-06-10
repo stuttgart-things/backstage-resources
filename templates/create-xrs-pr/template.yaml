@@ -86,9 +86,9 @@ spec:
                   title: Base Path
                   type: string
                   description: Base folder for XRs in the repository
-                  default: tests/envs/harvester/crossplane-mgmt
+                  default: tests/envs/harvester/crossplane-mgmt/xrs
                   enum:
-                    - tests/envs/harvester/crossplane-mgmt
+                    - tests/envs/harvester/crossplane-mgmt/xrs
             - properties:
                 repository:
                   enum:
