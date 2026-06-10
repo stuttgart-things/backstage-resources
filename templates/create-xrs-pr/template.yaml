@@ -2,36 +2,36 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: claim-to-pull-request
-  title: Create Resource claims
-  description: Create a GitHub Pull Request with rendered claim manifests (supports single or multiple claims)
+  name: create-xrs-pr
+  title: Create Crossplane XRs
+  description: Create a GitHub Pull Request with rendered XR manifests (supports single or multiple XRs)
   tags:
     - crossplane
     - kubernetes
     - infrastructure
     - gitops
-    - claims
+    - xrs
 spec:
   owner: platform-team
   type: service
 
   parameters:
-    - title: Resource Claims
-      description: Select one or more claim templates and configure parameters for each
+    - title: Crossplane XRs
+      description: Select one or more XR templates and configure parameters for each
       required:
         - claims
         - category
       properties:
         claims:
-          title: Claims
+          title: XRs
           type: string
-          description: Select templates and configure parameters for each claim
+          description: Select templates and configure parameters for each XR
           ui:field: ClaimMachineryMultiClaim
 
         category:
           title: Category
           type: string
-          description: Category for the claim resources
+          description: Category for the XR resources
           enum:
             - infra
             - apps
@@ -50,17 +50,18 @@ spec:
             - Only Manifests
 
     - title: Target Repository
-      description: Select the repository and path where claim manifests will be committed
+      description: Select the repository and path where XR manifests will be committed
       required:
         - repository
       properties:
         repository:
           title: Repository
           type: string
-          description: GitHub repository for the claim PR
+          description: GitHub repository for the XR PR
           enum:
             - stuttgart-things/harvester
             - stuttgart-things/stuttgart-things
+            - stuttgart-things/crossplane-configurations
           default: stuttgart-things/harvester
       dependencies:
         repository:
@@ -72,10 +73,21 @@ spec:
                 basePath:
                   title: Base Path
                   type: string
-                  description: Base folder for claims in the repository
+                  description: Base folder for XRs in the repository
                   default: claims
                   enum:
                     - claims
+            - properties:
+                repository:
+                  enum:
+                    - stuttgart-things/crossplane-configurations
+                basePath:
+                  title: Base Path
+                  type: string
+                  description: Base folder for XRs in the repository
+                  default: tests/envs/harvester/crossplane-mgmt
+                  enum:
+                    - tests/envs/harvester/crossplane-mgmt
             - properties:
                 repository:
                   enum:
@@ -83,12 +95,12 @@ spec:
                 basePath:
                   title: Base Path
                   type: string
-                  description: "Base folder for claims (e.g. clusters/labul/vsphere/claims)"
+                  description: "Base folder for XRs (e.g. clusters/labul/vsphere/claims)"
                   default: clusters/<LAB>/<CLOUD>/claims
 
   steps:
     - id: render-claims
-      name: Render Claims and Create PR
+      name: Render XRs and Create PR
       action: claim-machinery:render-multiple
       input:
         claims: ${{ parameters.claims }}
@@ -130,6 +142,6 @@ spec:
       - title: Next Steps
         content: |
           1. Review the pull request in GitHub
-          2. Merge the PR to add the claim(s) to the repository
+          2. Merge the PR to add the XR(s) to the repository
           3. The catalog components will be available after merge
-          4. Claims will be reconciled by the cluster controller
+          4. XRs will be reconciled by the cluster controller
