@@ -32,6 +32,7 @@ spec:
           title: Category
           type: string
           description: Category for the XR resources
+          default: infra
           enum:
             - infra
             - apps
