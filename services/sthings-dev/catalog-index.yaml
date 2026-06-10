@@ -151,3 +151,16 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/stuttgart-things/blob/main/backstage/templates/create-argocd-cluster/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: crossplane-configurations-test-xrs
+  description: Test-env Crossplane XR claims from crossplane-configurations (harvester/crossplane-mgmt)
+spec:
+  type: url
+  # Points at the generated catalog index (itself a kind: Location), which in
+  # turn lists each claim's catalog-info.yaml. Repo uses no GitHub discovery;
+  # the index is kept in sync by tests/.backstage/catalog-index.sh in CI.
+  targets:
+    - https://github.com/stuttgart-things/crossplane-configurations/blob/main/tests/.backstage/catalog-locations.yaml
