@@ -30,10 +30,6 @@ spec:
             - 🪨 Rocky Linux 9 (golden sthings-rocky9)
             - 🦎 openSUSE Leap 15.6 (golden sthings-leap)
           default: ubuntu26
-        targetNameOverride:
-          title: Target Name Override (optional)
-          type: string
-          description: Leave empty to use the default dev name (u26-dev, rocky9-dev, leap-dev)
 
     - title: Add New Users
       description: |
@@ -104,7 +100,6 @@ spec:
       input:
         data:
           baseImage: ${{ parameters.baseImage }}
-          override: ${{ parameters.targetNameOverride }}
           golden:
             ubuntu26: sthings-u26
             rocky: sthings-rocky9
@@ -125,7 +120,7 @@ spec:
         expression: |
           {
             "goldenName": $lookup(golden, baseImage),
-            "devName": override != '' ? override : $lookup(dev, baseImage),
+            "devName": $lookup(dev, baseImage),
             "distroTags": $lookup(distroTags, baseImage),
             "profileBase": $lookup(profileBase, baseImage)
           }
