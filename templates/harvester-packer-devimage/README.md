@@ -103,7 +103,7 @@ harvester-packer-devimage/
 ### Act 1 — Self-Service (Backstage)
 
 1. Backstage → **Create** → **Create Harvester VM-Template**.
-2. **Base Image:** `🟠 Ubuntu 26.04 LTS`. Leave the target-name override empty.
+2. **Base Image:** `🟠 Ubuntu 26.04 LTS`. The dev image name (`u26-dev`) is derived automatically.
 3. **Add New Users:** add one user — your name, paste your SSH public key.
    *Say:* "Existing users are preserved; I'm just adding myself."
 4. **Additional Packages:** add `docker.io` and `kubectl`.
