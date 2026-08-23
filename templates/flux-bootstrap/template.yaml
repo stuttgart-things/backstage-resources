@@ -101,10 +101,8 @@ spec:
                   title: Flux Operator Version
                   type: string
                   description: Version of the Flux operator to deploy
-                  default: "0.47.0"
-                  enum:
-                    - "0.47.0"
-                    - "0.42.1"
+                  # renovate: datasource=github-releases depName=controlplaneio-fluxcd/flux-operator
+                  default: "0.58.1"
               dependencies:
                 repository:
                   oneOf:
