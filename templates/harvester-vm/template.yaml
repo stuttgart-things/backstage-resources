@@ -1,0 +1,214 @@
+---
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: harvester-vm
+  title: Harvester VM
+  description: >-
+    Create a virtual machine on Harvester. Renders an XVirtualMachine XR and
+    opens a pull request against crossplane-configurations; Argo CD
+    (showcase-crossplane-xrs) applies it automatically once the PR is merged.
+  tags:
+    - vm
+    - harvester
+    - kubevirt
+    - crossplane
+    - gitops
+spec:
+  owner: platform-team
+  type: infrastructure
+
+  parameters:
+    - title: Virtual Machine
+      description: Name and placement of the VM
+      required:
+        - name
+        - claimNamespace
+      properties:
+        name:
+          title: VM Name
+          type: string
+          description: >-
+            Becomes the XR name, the VM name and the hostname. Lowercase
+            letters, digits and dashes only.
+          default: vm-harvester-1
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          maxLength: 50
+          ui:autofocus: true
+          ui:help: 'The disk PVC is derived from this as <name>-disk.'
+
+        claimNamespace:
+          title: Claim Namespace
+          type: string
+          description: >-
+            Namespace of the XR on the crossplane-mgmt cluster. The VM itself
+            always lands in the `vms` namespace on Harvester (from the
+            virtualmachine-harvester EnvironmentConfig).
+          default: default
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          maxLength: 63
+
+    - title: Sizing and Image
+      description: T-shirt size and base image
+      required:
+        - size
+        - os
+      properties:
+        size:
+          title: Size
+          type: string
+          description: Maps to CPU, memory and disk in the virtual-machine composition.
+          default: medium
+          enum:
+            - small
+            - medium
+            - large
+            - xlarge
+          enumNames:
+            - 'small  -  2 vCPU / 2 GiB RAM / 32 GiB disk'
+            - 'medium  -  4 vCPU / 4 GiB RAM / 64 GiB disk'
+            - 'large  -  8 vCPU / 8 GiB RAM / 128 GiB disk'
+            - 'xlarge  -  16 vCPU / 16 GiB RAM / 256 GiB disk'
+
+        os:
+          title: Base Image
+          type: string
+          description: >-
+            Keys the images map in the virtualmachine-harvester
+            EnvironmentConfig, which pairs each image with its matching
+            Longhorn StorageClass.
+          default: sthings-u26
+          enum:
+            - sthings-u26
+            - sthings-rocky9
+            - sthings-leap
+            - sthings-u26-k3s
+            - ubuntu24
+            - rocky9-dev
+          enumNames:
+            - 'sthings-u26  -  Ubuntu golden image (works with Ansible)'
+            - 'sthings-rocky9  -  Rocky 9 golden image (works with Ansible)'
+            - 'sthings-leap  -  openSUSE Leap golden image (works with Ansible)'
+            - 'sthings-u26-k3s  -  Ubuntu golden image with k3s (20 GiB base)'
+            - 'ubuntu24  -  vanilla Ubuntu (u26-dev) - NOT usable with Ansible'
+            - 'rocky9-dev  -  vanilla Rocky 9 - NOT usable with Ansible'
+          ui:help: >-
+            Only the sthings-* golden images carry the `sthings` user with the
+            password auth the ansible-credentials secret expects. The vanilla
+            images disable password auth, so Ansible provisioning fails with
+            "Permission denied (publickey)".
+
+    - title: Provisioning
+      description: Optional base-OS configuration after the VM is up
+      properties:
+        ansible:
+          title: Run Ansible base-OS provisioning
+          type: boolean
+          description: >-
+            Runs the sthings.baseos.setup playbook via a Tekton PipelineRun
+            once the VM reports an IP. Requires one of the sthings-* golden
+            images above.
+          default: false
+
+    - title: Target
+      description: Where the pull request is opened
+      required:
+        - repository
+        - basePath
+        - category
+      properties:
+        repository:
+          title: Repository
+          type: string
+          default: stuttgart-things/crossplane-configurations
+          enum:
+            - stuttgart-things/crossplane-configurations
+            - stuttgart-things/harvester
+          enumNames:
+            - 'crossplane-configurations  -  reconciled by Argo CD'
+            - 'harvester'
+
+        basePath:
+          title: Base Path
+          type: string
+          description: >-
+            Folder in the repository. The Argo CD application
+            showcase-crossplane-xrs watches this path recursively.
+          default: tests/envs/harvester/crossplane-mgmt/xrs
+          enum:
+            - tests/envs/harvester/crossplane-mgmt/xrs
+            - claims
+
+        category:
+          title: Category
+          type: string
+          description: Sub-folder under the base path.
+          default: virtual-machine
+          enum:
+            - virtual-machine
+            - infra
+            - apps
+            - other-resources
+
+        targetBranch:
+          title: Target Branch
+          type: string
+          default: main
+
+  steps:
+    - id: render-claim
+      name: Render XR and open pull request
+      action: claim-machinery:render-multiple
+      input:
+        claims:
+          - template: xr-virtualmachine-harvester
+            nameOverride: ${{ parameters.name }}
+            parameters:
+              name: ${{ parameters.name }}
+              claimNamespace: ${{ parameters.claimNamespace }}
+              size: ${{ parameters.size }}
+              os: ${{ parameters.os }}
+              ansible: ${{ parameters.ansible }}
+        repository: ${{ parameters.repository }}
+        basePath: ${{ parameters.basePath }}
+        claimCategory: ${{ parameters.category }}
+        targetBranch: ${{ parameters.targetBranch }}
+        mode: flux
+        catalogOwner: platform-team
+        prTitle: 'feat(vm): add Harvester VM ${{ parameters.name }}'
+
+  output:
+    links:
+      - title: Pull Request
+        icon: github
+        url: ${{ steps['render-claim'].output.pullRequestUrl }}
+      - title: Argo CD Application
+        icon: dashboard
+        url: https://argocd.platform.sthings.lab/applications/showcase-crossplane-xrs
+    text:
+      - title: Pull request opened
+        content: |
+          **${{ steps['render-claim'].output.pullRequestUrl }}**
+
+          Branch: `${{ steps['render-claim'].output.branchName }}`
+          Path: `${{ parameters.basePath }}/${{ parameters.category }}/${{ parameters.name }}/`
+      - title: Rendered XR
+        content: |
+          ```yaml
+          ${{ steps['render-claim'].output.manifest }}
+          ```
+      - title: What happens after the merge
+        content: |
+          1. Argo CD (`showcase-crossplane-xrs`, automated sync with selfHeal
+             and prune) picks up the new folder. It polls roughly every three
+             minutes - hit Refresh in the Argo UI to apply immediately.
+          2. Crossplane renders the `XVirtualMachine` into a `HarvesterVM`,
+             then into VirtualMachine, PVC and Secret objects on Harvester via
+             the `harvester` ClusterProviderConfig.
+          3. Watch it come up:
+             `kubectl get xvirtualmachines.resources.stuttgart-things.com -A`
+          4. The VM IP appears on `status.share.ip` once the QEMU guest agent
+             reports in.
+
+          Note that `prune: true` is active: deleting the folder from the
+          repository deletes the VM.
