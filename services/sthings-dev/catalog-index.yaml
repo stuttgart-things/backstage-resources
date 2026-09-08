@@ -164,3 +164,13 @@ spec:
   # the index is kept in sync by tests/.backstage/catalog-index.sh in CI.
   targets:
     - https://github.com/stuttgart-things/crossplane-configurations/blob/main/tests/.backstage/catalog-locations.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: harvester-vm-template
+  description: Harvester VM software template
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/harvester-vm/template.yaml
