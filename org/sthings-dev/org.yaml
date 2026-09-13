@@ -20,6 +20,17 @@ metadata:
 spec:
   memberOf: [guests]
 ---
+# A developer: in guests, not in platform-team. The sthings-backstage permission
+# policy therefore shows Martwol only templates annotated
+# backstage.stuttgart-things.com/audience: developers (request-vm).
+# The name must be the GitHub login -- sign-in resolves users by it.
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: Martwol
+spec:
+  memberOf: [guests]
+---
 apiVersion: backstage.io/v1alpha1
 kind: Group
 metadata:
