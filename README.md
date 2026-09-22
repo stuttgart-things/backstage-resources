@@ -62,6 +62,7 @@ Contains catalog location references that register external services.
 | claim-machinery-api | [GitHub](https://github.com/stuttgart-things/claim-machinery-api) | Crossplane claim rendering API |
 | sthings-backstage | [GitHub](https://github.com/stuttgart-things/sthings-backstage) | Backstage application |
 | blueprints | [GitHub](https://github.com/stuttgart-things/blueprints) | Infrastructure blueprints |
+| machinery (System) | [crossplane-configurations](https://github.com/stuttgart-things/crossplane-configurations), [flux](https://github.com/stuttgart-things/flux), [kcl](https://github.com/stuttgart-things/kcl) | Crossplane packages, KCL modules and the Flux profile of the machinery clusters, with TechDocs |
 
 #### Template Locations
 
