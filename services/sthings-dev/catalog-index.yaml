@@ -155,15 +155,18 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
-  name: crossplane-configurations-test-xrs
-  description: Test-env Crossplane XR claims from crossplane-configurations (harvester/crossplane-mgmt)
+  name: machinery
+  description: The machinery system -- Crossplane packages, their KCL modules, the Flux profile, and the docs that tie them together (stuttgart-things#3138)
 spec:
   type: url
-  # Points at the generated catalog index (itself a kind: Location), which in
-  # turn lists each claim's catalog-info.yaml. Repo uses no GitHub discovery;
-  # the index is kept in sync by tests/.backstage/catalog-index.sh in CI.
+  # Replaces crossplane-configurations-test-xrs, whose target
+  # (tests/.backstage/catalog-locations.yaml) was removed in
+  # crossplane-configurations#416 and only produced a processing error.
   targets:
-    - https://github.com/stuttgart-things/crossplane-configurations/blob/main/tests/.backstage/catalog-locations.yaml
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/services/sthings-dev/systems/machinery.yaml
+    - https://github.com/stuttgart-things/crossplane-configurations/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/flux/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/kcl/blob/main/catalog-info.yaml
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Location

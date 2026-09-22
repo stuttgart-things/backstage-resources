@@ -1,0 +1,21 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: machinery
+  title: Machinery
+  description: >-
+    Everything that builds clusters and VMs through Crossplane: the
+    Configuration packages (crossplane-configurations), their KCL modules
+    (kcl), the Crossplane profile that installs them (flux), and the
+    machinery clusters that run them (kind per lab for dev/test, one Flux-
+    managed RKE2 cluster for stable -- stuttgart-things#3136). Prerequisites
+    per XR, examples and preflight: stuttgart-things#3138.
+  links:
+    - url: https://github.com/stuttgart-things/crossplane-configurations
+      title: crossplane-configurations
+      icon: github
+    - url: https://github.com/stuttgart-things/stuttgart-things/issues/3136
+      title: Target picture (stable machinery via Flux)
+spec:
+  owner: platform-team
