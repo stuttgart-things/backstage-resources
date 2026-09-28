@@ -214,6 +214,16 @@ spec:
           distroTags: ${{ steps['resolve-names'].output.result.distroTags }}
           profileBase: ${{ steps['resolve-names'].output.result.profileBase }}
 
+    # The fetched *-existing.yaml files are merge inputs only. The PR step
+    # publishes the whole workspace, so drop them or they land in the repo.
+    - id: cleanup-workspace
+      name: Remove Merge Inputs
+      action: fs:delete
+      input:
+        files:
+          - ./packages-existing.yaml
+          - ./users-existing.yaml
+
     - id: create-pull-request
       name: Create Pull Request
       action: publish:github:pull-request
@@ -228,8 +238,16 @@ spec:
           Self-service dev image layered on golden `${{ steps['resolve-names'].output.result.goldenName }}`.
           Updated via Backstage software template.
 
-          On a green build + upload, `packer-pr-build.yml` auto-merges this PR
-          (unless it also touches a golden image, which forces review).
+          `packer-pr-build.yml` test-builds the image and registers a throwaway
+          `${{ steps['resolve-names'].output.result.devName }}-pr<N>.<version>`
+          with Harvester. On a green build it auto-merges this PR (unless the PR
+          changes anything outside `packer/dev/`, which forces review).
+
+          After the merge, the auto-merge job dispatches `packer-release.yml`, which
+          releases the image from `main` as
+          `${{ steps['resolve-names'].output.result.devName }}-<version>` and opens a
+          `pin-bot/${{ steps['resolve-names'].output.result.devName }}` PR that moves its pin in
+          `env-config-virtualmachine.yaml`. For a dev image that PR auto-merges.
         targetPath: packer/dev/${{ steps['resolve-names'].output.result.devName }}
 
     - id: register
@@ -251,8 +269,18 @@ spec:
       - title: Next Steps
         content: |
           PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
-          The packer build pipeline (packer-pr-build.yml) builds + uploads the
-          dev image to Harvester, then auto-merges the PR on success.
+
+          1. `packer-pr-build.yml` test-builds the dev image on top of the golden
+             base, publishes it to the MinIO artifact store and registers it with
+             Harvester (which downloads it from there) as
+             `${{ steps['resolve-names'].output.result.devName }}-pr<N>.<version>`.
+          2. On a green build the PR auto-merges.
+          3. `packer-release.yml` (dispatched by the auto-merge) releases the image from `main` as
+             `${{ steps['resolve-names'].output.result.devName }}-<version>`.
+          4. A `pin-bot/${{ steps['resolve-names'].output.result.devName }}` PR moves its pin in
+             `clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`
+             and auto-merges. New VMs boot from the new image; existing VMs keep
+             theirs until rebuilt.
       - title: Catalog Resource Preview
         content: | #pragma: allowlist secret
           ## Catalog Entity

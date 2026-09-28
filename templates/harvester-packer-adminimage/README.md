@@ -23,8 +23,10 @@ This template curates an existing **golden** base image (`sthings-u26` /
 in a chosen CIS profile's **security tooling** plus any admin additions, and opens a
 **draft** PR against `packer/golden/<name>/`. Golden images are review-gated — the PR
 is not auto-merged; a platform admin reviews and merges. After merge to `main`,
-`packer-build.yml` rebuilds the golden image, uploads it to Harvester, and republishes
-the base to S3 so dev images can layer on it.
+`packer-build.yml` rebuilds the golden image, publishes it to the MinIO artifact store
+(so dev images can layer on it) and registers it with Harvester — which downloads it
+from there — as a new versioned image `<name>-<version>`, then opens a review-gated
+`pin-bot/<name>` PR that moves its pin in `env-config-virtualmachine.yaml`.
 
 ```mermaid
 flowchart TD
@@ -37,7 +39,9 @@ flowchart TD
     G --> H[Register Resource in catalog]
     G --> R{{Admin review}}
     R -->|approve + merge to main| I[packer-build.yml rebuilds golden]
-    I --> J[Upload to Harvester + republish base to S3]
+    I --> J[Publish base to MinIO<br/>publish-base.sh]
+    J --> K[Register with Harvester<br/>register-image.sh: name-version]
+    K --> L[pin-bot PR moves the pin<br/>review-gated]
 ```
 
 ## Form parameters
@@ -66,10 +70,14 @@ package/user/catalog files.
 1. Run the template → opens a **draft** PR against `packer/golden/<name>/`.
 2. A platform admin reviews the change. The PR build (`packer-pr-build.yml`) is
    **validation-only** for golden — it builds to prove it works, but does not
-   upload and does not auto-merge.
+   publish, does not register and does not auto-merge.
 3. Mark the PR ready & merge. After merge to `main`, `packer-build.yml` rebuilds the
-   golden image, uploads it to Harvester, and republishes the base to S3.
-4. Dev images layered on this golden base pick up the change on their next build.
+   golden image, publishes it to MinIO, and registers it with Harvester as
+   `<name>-<version>`.
+4. Review and merge the `pin-bot/<name>` PR the release opens: it moves the pin in
+   [`env-config-virtualmachine.yaml`](https://github.com/stuttgart-things/harvester/blob/main/clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml)
+   to the new image. Images are never replaced in place.
+5. Dev images layered on this golden base pick up the change on their next build.
 
 > **Note on CIS hardening.** Today the `cisProfile` is recorded as metadata and the
 > selected `securityTooling` packages are installed into the golden image. The shared
@@ -82,7 +90,7 @@ package/user/catalog files.
 ## Prerequisites (Backstage)
 
 Same scaffolder actions as the dev template (`roadiehq:utils:jsonata`,
-`utils:yaml:parse`, `fetch:plain:file`, `fetch:template:file`,
+`utils:yaml:parse`, `fetch:plain:file`, `fetch:template:file`, `fs:delete`,
 `publish:github:pull-request` with draft support, `catalog:register`) plus a
 GitHub token that can open PRs on `stuttgart-things/harvester`.
 

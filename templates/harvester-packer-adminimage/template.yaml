@@ -238,6 +238,16 @@ spec:
           distroTags: ${{ steps['resolve-names'].output.result.distroTags }}
           profileBase: ${{ steps['resolve-names'].output.result.profileBase }}
 
+    # The fetched *-existing.yaml files are merge inputs only. The PR step
+    # publishes the whole workspace, so drop them or they land in the repo.
+    - id: cleanup-workspace
+      name: Remove Merge Inputs
+      action: fs:delete
+      input:
+        files:
+          - ./packages-existing.yaml
+          - ./users-existing.yaml
+
     - id: create-pull-request
       name: Create Pull Request (review-gated draft)
       action: publish:github:pull-request
@@ -261,7 +271,11 @@ spec:
           > ⚠️ **Review-gated:** golden images are not auto-merged. This PR is
           > opened as a **draft**; a platform admin reviews the change and merges
           > manually. After merge to `main`, `packer-build.yml` rebuilds the
-          > golden image, uploads it to Harvester, and republishes the base to S3.
+          > golden image, publishes it to the MinIO artifact store (the base dev
+          > images layer on) and registers it with Harvester as
+          > `${{ steps['resolve-names'].output.result.goldenName }}-<version>`.
+          > A `pin-bot/${{ steps['resolve-names'].output.result.goldenName }}` PR then moves its pin in
+          > `env-config-virtualmachine.yaml` — also review-gated.
         targetPath: packer/golden/${{ steps['resolve-names'].output.result.goldenName }}
 
     - id: register
@@ -289,8 +303,14 @@ spec:
              validation-only for golden — no upload, no auto-merge.
           3. After merge to `main`, `packer-build.yml` rebuilds the
              `${{ steps['resolve-names'].output.result.goldenName }}` golden image,
-             uploads it to Harvester, and republishes the base to S3 so dev images
-             can layer on it.
+             publishes it to the MinIO artifact store (so dev images can layer on
+             it) and registers it with Harvester, which downloads it from there,
+             as a new versioned image.
+          4. The release opens a `pin-bot/${{ steps['resolve-names'].output.result.goldenName }}` PR
+             that moves the pin in
+             `clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`.
+             It is review-gated too: merging it moves every VM rebuilt from this
+             image. Images are never replaced in place.
       - title: Hardened Golden Image Preview
         content: | #pragma: allowlist secret
           ## Catalog Entity
