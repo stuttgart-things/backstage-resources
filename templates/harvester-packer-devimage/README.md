@@ -19,7 +19,8 @@ which builds the image, publishes it to MinIO, registers it with Harvester as
 `<name>-pr<N>.<version>` as a throwaway test image, and **auto-merges** the PR on
 success (unless the PR changes anything outside `packer/dev/`, which forces review).
 
-After the merge, `packer-build.yml` **releases** the image from `main` as
+After the merge, the auto-merge job dispatches `packer-release.yml`, which
+**releases** the image from `main` as
 `<name>-<version>` and opens a `pin-bot/<name>` PR that moves its pin in
 [`env-config-virtualmachine.yaml`](https://github.com/stuttgart-things/harvester/blob/main/clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml).
 For a dev image that PR auto-merges. Harvester images are versioned and never
@@ -39,7 +40,7 @@ flowchart TD
     I --> J[Publish to MinIO<br/>publish-base.sh]
     J --> J2[Register with Harvester<br/>register-image.sh: name-prN.version]
     J2 --> K[Auto-merge PR<br/>squash + delete branch]
-    K --> M{{packer-build.yml release}}
+    K --> M{{packer-release.yml<br/>dispatched by the auto-merge}}
     M --> N[Build + register name-version]
     N --> L[pin-bot PR moves the pin, auto-merged<br/>image bootable + discoverable in catalog]
 ```
@@ -88,8 +89,10 @@ harvester-packer-devimage/
   `stuttgart-things/harvester`.
 
 **`stuttgart-things/harvester` repo**
-- Workflows `packer-pr-build.yml` (PR build + publish + register + auto-merge for dev) and
-  `packer-build.yml`.
+- Workflows `packer-pr-build.yml` (PR build + publish + register + auto-merge for dev,
+  which then dispatches the release) and `packer-release.yml` (release + pin PR).
+  A merge made with `GITHUB_TOKEN` starts no push workflow, hence the dispatch
+  (stuttgart-things/harvester#275).
 - The matching **golden base must be built + published to S3 at least once** —
   the dev build pulls it over HTTPS via `source_url`, otherwise it returns 404.
 - A `harvester` GitHub Environment with the secrets `HARVESTER_VIP`,

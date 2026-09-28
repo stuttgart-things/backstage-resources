@@ -243,7 +243,8 @@ spec:
           with Harvester. On a green build it auto-merges this PR (unless the PR
           changes anything outside `packer/dev/`, which forces review).
 
-          After the merge, `packer-build.yml` releases the image from `main` as
+          After the merge, the auto-merge job dispatches `packer-release.yml`, which
+          releases the image from `main` as
           `${{ steps['resolve-names'].output.result.devName }}-<version>` and opens a
           `pin-bot/${{ steps['resolve-names'].output.result.devName }}` PR that moves its pin in
           `env-config-virtualmachine.yaml`. For a dev image that PR auto-merges.
@@ -274,7 +275,7 @@ spec:
              Harvester (which downloads it from there) as
              `${{ steps['resolve-names'].output.result.devName }}-pr<N>.<version>`.
           2. On a green build the PR auto-merges.
-          3. `packer-build.yml` releases the image from `main` as
+          3. `packer-release.yml` (dispatched by the auto-merge) releases the image from `main` as
              `${{ steps['resolve-names'].output.result.devName }}-<version>`.
           4. A `pin-bot/${{ steps['resolve-names'].output.result.devName }}` PR moves its pin in
              `clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`
