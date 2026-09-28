@@ -274,8 +274,8 @@ spec:
           > golden image, publishes it to the MinIO artifact store (the base dev
           > images layer on) and registers it with Harvester as
           > `${{ steps['resolve-names'].output.result.goldenName }}-<version>`.
-          > Move the pin in `env-config-virtualmachine.yaml` to use it (the
-          > workflow's step summary prints the new pin).
+          > A `pin-bot/${{ steps['resolve-names'].output.result.goldenName }}` PR then moves its pin in
+          > `env-config-virtualmachine.yaml` — also review-gated.
         targetPath: packer/golden/${{ steps['resolve-names'].output.result.goldenName }}
 
     - id: register
@@ -306,10 +306,11 @@ spec:
              publishes it to the MinIO artifact store (so dev images can layer on
              it) and registers it with Harvester, which downloads it from there,
              as a new versioned image.
-          4. Move the pin in
-             `clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`
-             to the new `imageId` + `storageClassName` — the workflow's step
-             summary prints both. Images are never replaced in place.
+          4. The release opens a `pin-bot/${{ steps['resolve-names'].output.result.goldenName }}` PR
+             that moves the pin in
+             `clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`.
+             It is review-gated too: merging it moves every VM rebuilt from this
+             image. Images are never replaced in place.
       - title: Hardened Golden Image Preview
         content: | #pragma: allowlist secret
           ## Catalog Entity

@@ -16,14 +16,15 @@ against [`stuttgart-things/harvester`](https://github.com/stuttgart-things/harve
 under `packer/dev/<name>/`. A dev image is **layered on top of the matching golden
 base**, so a build only installs the delta. The PR triggers `packer-pr-build.yml`,
 which builds the image, publishes it to MinIO, registers it with Harvester as
-`<name>-pr<N>.<version>`, and **auto-merges** the PR on success (unless the PR also
-touches a golden dir, which forces review).
+`<name>-pr<N>.<version>` as a throwaway test image, and **auto-merges** the PR on
+success (unless the PR changes anything outside `packer/dev/`, which forces review).
 
-> **The new image is not used automatically.** Harvester images are versioned and
-> never replaced in place, so a VM only boots from the new build once its pin in
-> [`env-config-virtualmachine.yaml`](https://github.com/stuttgart-things/harvester/blob/main/clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml)
-> points at it (`imageId` + `storageClassName`, both printed by the register step).
-> An unpinned PR image is pruned once its PR is closed and no VM disk uses it.
+After the merge, `packer-build.yml` **releases** the image from `main` as
+`<name>-<version>` and opens a `pin-bot/<name>` PR that moves its pin in
+[`env-config-virtualmachine.yaml`](https://github.com/stuttgart-things/harvester/blob/main/clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml).
+For a dev image that PR auto-merges. Harvester images are versioned and never
+replaced in place, so new VMs boot from the new image once the pin PR lands;
+existing VMs keep theirs until rebuilt.
 
 ```mermaid
 flowchart TD
@@ -38,7 +39,9 @@ flowchart TD
     I --> J[Publish to MinIO<br/>publish-base.sh]
     J --> J2[Register with Harvester<br/>register-image.sh: name-prN.version]
     J2 --> K[Auto-merge PR<br/>squash + delete branch]
-    K --> L[Move pin in env-config-virtualmachine.yaml<br/>image bootable + discoverable in catalog]
+    K --> M{{packer-build.yml release}}
+    M --> N[Build + register name-version]
+    N --> L[pin-bot PR moves the pin, auto-merged<br/>image bootable + discoverable in catalog]
 ```
 
 ## Repository layout
@@ -138,9 +141,8 @@ harvester-packer-devimage/
 
 ### Act 4 — Discoverability (the payoff)
 
-8. In **Harvester → Images**, show the new `u26-dev-pr<N>.<version>` image (or
-   refresh once imported). To boot VMs from it, its pin in
-   `env-config-virtualmachine.yaml` has to be moved to it.
+8. After the merge, show the release run and the `pin-bot/u26-dev` PR moving the
+   pin; in **Harvester → Images**, show the new `u26-dev-<version>` image.
 9. In **Backstage catalog**, open the registered `u26-dev-packer-image` Resource.
 10. *Close:* "From a form to a bootable image layered on a governed golden base,
     fully driven by Git — that's the Internal Developer Platform promise made concrete."
@@ -175,7 +177,7 @@ harvester-packer-devimage/
 | Dev build fails with `Checksums did not match` | Golden artifact truncated or re-published mid-build | Re-run the golden build (it re-publishes image + `.sha256`) |
 | Publish step fails | MinIO creds wrong | Check `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` in the `harvester` environment |
 | Register fails / image stuck importing | Harvester creds, or `x509: certificate signed by unknown authority` | Check `HARVESTER_VIP` / `HARVESTER_PASSWORD`; refresh `settings.harvesterhci.io/additional-ca` |
-| New image built, VMs still boot the old one | Pin not moved | Update `imageId` + `storageClassName` in `env-config-virtualmachine.yaml` |
+| New image built, VMs still boot the old one | Pin PR not merged yet (or release skipped with `UPLOAD_TO_HARVESTER=false`) | Check the `pin-bot/<name>` PR; existing VMs only switch when rebuilt |
 | PR doesn't auto-merge | PR also touches a golden dir | Intentional — golden changes force review; split the PR |
 | Catalog entity missing right after run | `catalog-info.yaml` only exists on the PR branch | It appears after the PR merges (`register` is `optional: true`) |
 

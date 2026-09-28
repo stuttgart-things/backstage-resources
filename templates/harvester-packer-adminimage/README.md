@@ -25,8 +25,8 @@ in a chosen CIS profile's **security tooling** plus any admin additions, and ope
 is not auto-merged; a platform admin reviews and merges. After merge to `main`,
 `packer-build.yml` rebuilds the golden image, publishes it to the MinIO artifact store
 (so dev images can layer on it) and registers it with Harvester — which downloads it
-from there — as a new versioned image `<name>-<version>`. VMs use it once the pin in
-`env-config-virtualmachine.yaml` is moved to it.
+from there — as a new versioned image `<name>-<version>`, then opens a review-gated
+`pin-bot/<name>` PR that moves its pin in `env-config-virtualmachine.yaml`.
 
 ```mermaid
 flowchart TD
@@ -41,7 +41,7 @@ flowchart TD
     R -->|approve + merge to main| I[packer-build.yml rebuilds golden]
     I --> J[Publish base to MinIO<br/>publish-base.sh]
     J --> K[Register with Harvester<br/>register-image.sh: name-version]
-    K --> L[Move pin in env-config-virtualmachine.yaml]
+    K --> L[pin-bot PR moves the pin<br/>review-gated]
 ```
 
 ## Form parameters
@@ -74,10 +74,9 @@ package/user/catalog files.
 3. Mark the PR ready & merge. After merge to `main`, `packer-build.yml` rebuilds the
    golden image, publishes it to MinIO, and registers it with Harvester as
    `<name>-<version>`.
-4. Move the pin in
+4. Review and merge the `pin-bot/<name>` PR the release opens: it moves the pin in
    [`env-config-virtualmachine.yaml`](https://github.com/stuttgart-things/harvester/blob/main/clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml)
-   to the new `imageId` + `storageClassName` — the workflow's step summary prints
-   both. Images are never replaced in place.
+   to the new image. Images are never replaced in place.
 5. Dev images layered on this golden base pick up the change on their next build.
 
 > **Note on CIS hardening.** Today the `cisProfile` is recorded as metadata and the

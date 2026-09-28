@@ -170,8 +170,8 @@ layout: default
 
 <v-clicks>
 
-- New **`u26-dev-pr<N>.<version>`** image appears in **Harvester → Images**
-- Move its **pin** in `env-config-virtualmachine.yaml`
+- After the merge, a release build registers **`u26-dev-<version>`** in **Harvester → Images**
+- A **pin-bot** PR moves its pin — auto-merged
 - Registered **Resource** in the Backstage catalog
 - Boot a VM from it — done
 
