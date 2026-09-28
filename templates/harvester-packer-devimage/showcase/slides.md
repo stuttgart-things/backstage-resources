@@ -70,8 +70,9 @@ flowchart LR
     F --> G[Register in catalog]
     F --> H{{packer-pr-build.yml}}
     H --> I[packer build]
-    I --> J[Upload to Harvester]
-    J --> K[Auto-merge PR]
+    I --> J[Publish to MinIO]
+    J --> J2[Harvester pulls + registers it]
+    J2 --> K[Auto-merge PR]
 ```
 
 <div class="mt-4 text-sm opacity-70">
@@ -148,13 +149,13 @@ layout: default
 
 - The PR triggers **`packer-pr-build.yml`**
 - Packer builds the image on a **KVM runner**
-- Image is **uploaded to Harvester** (`upload_to_harvester: true`)
+- Image is **published to MinIO** — Harvester **pulls** it from there as `u26-dev-pr<N>.<version>`
 - On green → PR **auto-merges**, branch deleted
 
 </v-clicks>
 
 <div v-click class="mt-8 p-4 rounded border border-amber-500/40 bg-amber-500/10 text-sm">
-The human approved a form. The machine did the build, the upload, and the merge.
+The human approved a form. The machine did the build, the publish, and the merge.
 </div>
 
 ---
@@ -169,7 +170,8 @@ layout: default
 
 <v-clicks>
 
-- New **`u26-dev`** image appears in **Harvester → Images**
+- New **`u26-dev-pr<N>.<version>`** image appears in **Harvester → Images**
+- Move its **pin** in `env-config-virtualmachine.yaml`
 - Registered **Resource** in the Backstage catalog
 - Boot a VM from it — done
 
@@ -244,13 +246,13 @@ flowchart LR
     A[Draft PR · packer/golden/sthings-u26] --> B[PR build<br/>validate only]
     B --> C[Admin review + merge to main]
     C --> D[packer-build.yml rebuilds golden]
-    D --> E[Upload to Harvester<br/>+ republish base to S3]
+    D --> E[Publish base to MinIO<br/>+ register with Harvester]
     E --> F[Dev images layer on it ✅]
 ```
 
 <v-clicks>
 
-- Golden PR build is **validation-only** — no upload, no auto-merge
+- Golden PR build is **validation-only** — no publish, no auto-merge
 - A second admin **reviews** and merges; merge to `main` triggers the real build
 - Dev images **layer on** the republished golden base
 

@@ -2,7 +2,8 @@
 
 > Backstage Software Template for the **developer self-service** image story:
 > a developer fills out a form, and out the other end comes a fully built, bootable
-> VM image — layered on a golden base, uploaded to Harvester, and registered in the
+> VM image — layered on a golden base, published to the MinIO artifact store,
+> registered with Harvester (which downloads it from there), and registered in the
 > Backstage catalog. Everything in between is GitOps and CI.
 
 ---
@@ -14,8 +15,15 @@ image (users + packages) through a Backstage form and turns that into a Pull Req
 against [`stuttgart-things/harvester`](https://github.com/stuttgart-things/harvester),
 under `packer/dev/<name>/`. A dev image is **layered on top of the matching golden
 base**, so a build only installs the delta. The PR triggers `packer-pr-build.yml`,
-which builds the image, uploads it to Harvester, and **auto-merges** the PR on success
-(unless the PR also touches a golden dir, which forces review).
+which builds the image, publishes it to MinIO, registers it with Harvester as
+`<name>-pr<N>.<version>`, and **auto-merges** the PR on success (unless the PR also
+touches a golden dir, which forces review).
+
+> **The new image is not used automatically.** Harvester images are versioned and
+> never replaced in place, so a VM only boots from the new build once its pin in
+> [`env-config-virtualmachine.yaml`](https://github.com/stuttgart-things/harvester/blob/main/clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml)
+> points at it (`imageId` + `storageClassName`, both printed by the register step).
+> An unpinned PR image is pruned once its PR is closed and no VM disk uses it.
 
 ```mermaid
 flowchart TD
@@ -27,9 +35,10 @@ flowchart TD
     F --> G[Register Resource in Backstage catalog]
     F --> H{{packer-pr-build.yml}}
     H --> I[packer build from _build/<br/>layered on golden base]
-    I --> J[Upload to Harvester<br/>upload_to_harvester: true]
-    J --> K[Auto-merge PR<br/>squash + delete branch]
-    K --> L[Image bootable in Harvester<br/>+ discoverable in catalog]
+    I --> J[Publish to MinIO<br/>publish-base.sh]
+    J --> J2[Register with Harvester<br/>register-image.sh: name-prN.version]
+    J2 --> K[Auto-merge PR<br/>squash + delete branch]
+    K --> L[Move pin in env-config-virtualmachine.yaml<br/>image bootable + discoverable in catalog]
 ```
 
 ## Repository layout
@@ -60,27 +69,31 @@ harvester-packer-devimage/
 | 7 | `parse-existing-users` | `utils:yaml:parse` | Parse it |
 | 8 | `combine-users` | `roadiehq:utils:jsonata` | Merge by name — re-submitting a username **updates** instead of duplicating |
 | 9 | `render-users` | `fetch:template:file` | Render the complete `users.yaml` |
-| 10 | `render-pkrvars` | `fetch:template:file` | Render `build.pkrvars.hcl` (golden source_url + image name) |
+| 10 | `render-pkrvars` | `fetch:template:file` | Render `build.pkrvars.hcl` (golden `source_url` + its `.sha256` checksum + image name) |
 | 11 | `render-catalog` | `fetch:template:file` | Render `catalog-info.yaml` (type `packer-image-dev`) |
-| 12 | `create-pull-request` | `publish:github:pull-request` | Open PR on a per-user branch |
-| 13 | `register` | `catalog:register` | Best-effort catalog registration |
+| 12 | `cleanup-workspace` | `fs:delete` | Drop the fetched `*-existing.yaml` merge inputs so they don't land in the PR |
+| 13 | `create-pull-request` | `publish:github:pull-request` | Open PR on a per-user branch |
+| 14 | `register` | `catalog:register` | Best-effort catalog registration |
 
 ## Prerequisites
 
 **Backstage instance**
 - Scaffolder actions available: `roadiehq:utils:jsonata`, `roadiehq:utils:*`,
-  `utils:yaml:parse`, `fetch:plain:file`, `fetch:template:file`,
+  `utils:yaml:parse`, `fetch:plain:file`, `fetch:template:file`, `fs:delete`,
   `publish:github:pull-request`, `catalog:register`.
 - A GitHub integration with a token that can open PRs on
   `stuttgart-things/harvester`.
 
 **`stuttgart-things/harvester` repo**
-- Workflows `packer-pr-build.yml` (PR build + upload + auto-merge for dev) and
+- Workflows `packer-pr-build.yml` (PR build + publish + register + auto-merge for dev) and
   `packer-build.yml`.
 - The matching **golden base must be built + published to S3 at least once** —
   the dev build pulls it over HTTPS via `source_url`, otherwise it returns 404.
-- Repo secrets `HARVESTER_VIP` and `HARVESTER_PASSWORD`, and a `harvester`
-  GitHub Environment.
+- A `harvester` GitHub Environment with the secrets `HARVESTER_VIP`,
+  `HARVESTER_PASSWORD`, `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`.
+- The `packer` bucket must be public-read, and Harvester must trust the CA of the
+  artifact store (`settings.harvesterhci.io/additional-ca`) — Harvester downloads
+  the image itself.
 - A self-hosted runner with the `kvm` label online (the Packer build runs there).
 
 ---
@@ -120,12 +133,14 @@ harvester-packer-devimage/
 
 7. Open the PR's **Checks** tab → `packer-pr-build.yml` is running.
    *Say:* "Packer builds the dev image on a KVM runner — only the delta on top of
-   the golden base — and uploads it straight to Harvester. On green, the PR
-   auto-merges and the branch is deleted."
+   the golden base — publishes it to MinIO and has Harvester pull it from there.
+   On green, the PR auto-merges and the branch is deleted."
 
 ### Act 4 — Discoverability (the payoff)
 
-8. In **Harvester → Images**, show the new `u26-dev` image (or refresh once built).
+8. In **Harvester → Images**, show the new `u26-dev-pr<N>.<version>` image (or
+   refresh once imported). To boot VMs from it, its pin in
+   `env-config-virtualmachine.yaml` has to be moved to it.
 9. In **Backstage catalog**, open the registered `u26-dev-packer-image` Resource.
 10. *Close:* "From a form to a bootable image layered on a governed golden base,
     fully driven by Git — that's the Internal Developer Platform promise made concrete."
@@ -139,7 +154,9 @@ harvester-packer-devimage/
   [`harvester-packer-adminimage`](../harvester-packer-adminimage/) template drives
   the **golden** tier (`packer/golden/<name>/`) with a review-gated draft PR.
 - **Layered on golden.** `build.pkrvars.hcl` points `source_url` at the golden base
-  published to S3, so a dev build only installs the delta.
+  published to S3, so a dev build only installs the delta. `source_checksum` points
+  at the `.sha256` that `publish-base.sh` writes next to it, so a dev build never
+  layers on a truncated or half-published golden.
 - **Package de-duplication** — packages are merged via `$distinct`, so submitting a
   package that already exists no longer creates duplicates.
 - **User de-duplication / update semantics** — re-submitting an existing username
@@ -155,7 +172,10 @@ harvester-packer-devimage/
 |---|---|---|
 | PR build never starts | Change landed outside `packer/dev/**` | Confirm the PR touches `packer/dev/<name>/` |
 | Dev build fails on `source_url` 404 | Golden base never published to S3 | Build + merge the golden image first (admin template) |
-| Build fails on upload | Harvester creds / VIP wrong | Check `HARVESTER_VIP` / `HARVESTER_PASSWORD` + `harvester` environment |
+| Dev build fails with `Checksums did not match` | Golden artifact truncated or re-published mid-build | Re-run the golden build (it re-publishes image + `.sha256`) |
+| Publish step fails | MinIO creds wrong | Check `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` in the `harvester` environment |
+| Register fails / image stuck importing | Harvester creds, or `x509: certificate signed by unknown authority` | Check `HARVESTER_VIP` / `HARVESTER_PASSWORD`; refresh `settings.harvesterhci.io/additional-ca` |
+| New image built, VMs still boot the old one | Pin not moved | Update `imageId` + `storageClassName` in `env-config-virtualmachine.yaml` |
 | PR doesn't auto-merge | PR also touches a golden dir | Intentional — golden changes force review; split the PR |
 | Catalog entity missing right after run | `catalog-info.yaml` only exists on the PR branch | It appears after the PR merges (`register` is `optional: true`) |
 

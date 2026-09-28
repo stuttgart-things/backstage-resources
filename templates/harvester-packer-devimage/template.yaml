@@ -214,6 +214,16 @@ spec:
           distroTags: ${{ steps['resolve-names'].output.result.distroTags }}
           profileBase: ${{ steps['resolve-names'].output.result.profileBase }}
 
+    # The fetched *-existing.yaml files are merge inputs only. The PR step
+    # publishes the whole workspace, so drop them or they land in the repo.
+    - id: cleanup-workspace
+      name: Remove Merge Inputs
+      action: fs:delete
+      input:
+        files:
+          - ./packages-existing.yaml
+          - ./users-existing.yaml
+
     - id: create-pull-request
       name: Create Pull Request
       action: publish:github:pull-request
@@ -228,8 +238,16 @@ spec:
           Self-service dev image layered on golden `${{ steps['resolve-names'].output.result.goldenName }}`.
           Updated via Backstage software template.
 
-          On a green build + upload, `packer-pr-build.yml` auto-merges this PR
-          (unless it also touches a golden image, which forces review).
+          `packer-pr-build.yml` builds the image, publishes it to the MinIO
+          artifact store and registers it with Harvester as
+          `${{ steps['resolve-names'].output.result.devName }}-pr<N>.<version>`.
+          On a green build it auto-merges this PR (unless it also touches a
+          golden image, which forces review).
+
+          The new image is not used until its pin in
+          `clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`
+          points at it — and an unpinned PR image is pruned once this PR is closed
+          and no VM disk uses it.
         targetPath: packer/dev/${{ steps['resolve-names'].output.result.devName }}
 
     - id: register
@@ -251,8 +269,17 @@ spec:
       - title: Next Steps
         content: |
           PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
-          The packer build pipeline (packer-pr-build.yml) builds + uploads the
-          dev image to Harvester, then auto-merges the PR on success.
+
+          1. `packer-pr-build.yml` builds the dev image on top of the golden base.
+          2. It publishes the image to the MinIO artifact store and registers it
+             with Harvester, which downloads it from there, as
+             `${{ steps['resolve-names'].output.result.devName }}-pr<N>.<version>`.
+          3. On a green build the PR auto-merges.
+          4. To use the new image, move its pin in
+             `clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`
+             to the new `imageId` + `storageClassName` (shown in the register
+             step's log). Unpinned PR images are pruned once the PR is closed
+             and no VM disk uses them.
       - title: Catalog Resource Preview
         content: | #pragma: allowlist secret
           ## Catalog Entity
