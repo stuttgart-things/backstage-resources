@@ -62,7 +62,6 @@ spec:
           enum:
             - stuttgart-things/harvester
             - stuttgart-things/stuttgart-things
-            - stuttgart-things/crossplane-configurations
           default: stuttgart-things/harvester
       dependencies:
         repository:
@@ -74,21 +73,13 @@ spec:
                 basePath:
                   title: Base Path
                   type: string
-                  description: Base folder for XRs in the repository
-                  default: claims
+                  description: >-
+                    Base folder for XRs in the repository. Argo CD
+                    (showcase-crossplane-xrs) syncs clusters/crossplane-mgmt/xrs
+                    onto crossplane-mgmt; nothing reconciles claims/ anymore.
+                  default: clusters/crossplane-mgmt/xrs
                   enum:
-                    - claims
-            - properties:
-                repository:
-                  enum:
-                    - stuttgart-things/crossplane-configurations
-                basePath:
-                  title: Base Path
-                  type: string
-                  description: Base folder for XRs in the repository
-                  default: tests/envs/harvester/crossplane-mgmt/xrs
-                  enum:
-                    - tests/envs/harvester/crossplane-mgmt/xrs
+                    - clusters/crossplane-mgmt/xrs
             - properties:
                 repository:
                   enum:
