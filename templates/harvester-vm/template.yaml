@@ -6,8 +6,9 @@ metadata:
   title: Harvester VM
   description: >-
     Create a virtual machine on Harvester. Renders an XVirtualMachine XR and
-    opens a pull request against crossplane-configurations; Argo CD
-    (showcase-crossplane-xrs) applies it automatically once the PR is merged.
+    opens a pull request against stuttgart-things/harvester
+    (clusters/crossplane-mgmt/xrs); Argo CD (showcase-crossplane-xrs) applies
+    it automatically once the PR is merged.
   tags:
     - vm
     - harvester
@@ -120,13 +121,11 @@ spec:
         repository:
           title: Repository
           type: string
-          default: stuttgart-things/crossplane-configurations
+          default: stuttgart-things/harvester
           enum:
-            - stuttgart-things/crossplane-configurations
             - stuttgart-things/harvester
           enumNames:
-            - 'crossplane-configurations  -  reconciled by Argo CD'
-            - 'harvester'
+            - 'harvester  -  reconciled by Argo CD'
 
         basePath:
           title: Base Path
@@ -134,10 +133,9 @@ spec:
           description: >-
             Folder in the repository. The Argo CD application
             showcase-crossplane-xrs watches this path recursively.
-          default: tests/envs/harvester/crossplane-mgmt/xrs
+          default: clusters/crossplane-mgmt/xrs
           enum:
-            - tests/envs/harvester/crossplane-mgmt/xrs
-            - claims
+            - clusters/crossplane-mgmt/xrs
 
         category:
           title: Category
