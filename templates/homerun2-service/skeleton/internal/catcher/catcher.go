@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	homerun "github.com/stuttgart-things/homerun-library/v3"
+	homerun "github.com/stuttgart-things/homerun-library/v4"
 	"${{ values.goModule }}/internal/models"
 	"github.com/stuttgart-things/redisqueue"
 )

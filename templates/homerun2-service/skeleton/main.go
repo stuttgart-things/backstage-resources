@@ -23,7 +23,7 @@ import (
 	"${{ values.goModule }}/internal/catcher"
 {%- endif %}
 
-	homerun "github.com/stuttgart-things/homerun-library/v3"
+	homerun "github.com/stuttgart-things/homerun-library/v4"
 )
 
 var (
