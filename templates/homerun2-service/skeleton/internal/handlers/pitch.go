@@ -10,7 +10,7 @@ import (
 	"${{ values.goModule }}/internal/models"
 	"${{ values.goModule }}/internal/pitcher"
 
-	homerun "github.com/stuttgart-things/homerun-library/v3"
+	homerun "github.com/stuttgart-things/homerun-library/v4"
 )
 
 // NewPitchHandler creates a pitch handler with the given Pitcher backend.
