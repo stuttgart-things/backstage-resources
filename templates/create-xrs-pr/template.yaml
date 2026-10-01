@@ -77,6 +77,8 @@ spec:
                     Base folder for XRs in the repository. Argo CD
                     (showcase-crossplane-xrs) syncs clusters/crossplane-mgmt/xrs
                     onto crossplane-mgmt; nothing reconciles claims/ anymore.
+                    ClusterStack orders on machinery-hv have their own
+                    template: Create ClusterStack Order (machinery-hv).
                   default: clusters/crossplane-mgmt/xrs
                   enum:
                     - clusters/crossplane-mgmt/xrs

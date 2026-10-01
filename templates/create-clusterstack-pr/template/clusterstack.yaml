@@ -1,0 +1,62 @@
+---
+# Ordered through Backstage (create-clusterstack-pr) by ${{ values.owner }}.
+# The same path as app-dev-hv / demo-hv beside this file; read app-dev-hv.yaml
+# for why each field is what it is.
+#
+#   profiles                 ${{ values.profiles | join(', ') }}
+#   clusterAnnotations       no-creator-rbac -- README rule 5: honoured at
+#                            CREATE only, never remove it from this file
+#   argocd                   register: ${{ values.argocdRegister }}
+#
+# Before merging: two free addresses in the clusterbook pool 192.168.10 (node +
+# gateway/DNS reservation) -- README "Before an order".
+#
+# Teardown is two phases (README "Deleting an XR"): `platformEnabled: false`,
+# wait for the Platform to go, then delete. Reverting this PR deletes nothing:
+# the Kustomization runs with prune: false.
+apiVersion: config.stuttgart-things.com/v1alpha1
+kind: ClusterStack
+metadata:
+  name: ${{ values.name }}
+  namespace: default
+  annotations:
+    stuttgart-things.com/management-cluster: machinery-hv
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  provider: harvester
+  distribution: rancher-k3s
+  size: ${{ values.size }}
+  environmentConfig: sthings-lab
+  kubeconfig:
+    lifecycle:
+      vaultAddr: https://openbao.platform.sthings.lab
+  profiles:
+{%- for p in values.profiles %}
+    - ${{ p }}
+{%- endfor %}
+  rancher:
+    environmentConfig: rancher-join-sthings-lab
+    clusterAnnotations:
+      field.cattle.io/no-creator-rbac: "true"
+    argocd:
+      register: ${{ values.argocdRegister }}
+{%- if values.argocdRegister %}
+      reservation:
+        enabled: true
+        networkKey: '192.168.10'
+      labels:
+        env: sthings-lab
+{%- endif %}
+  platformEnabled: ${{ values.platformEnabled }}
+  platform:
+    fluxInit:
+      enabled: ${{ values.fluxInit }}
+    clusterSecrets:
+      enabled: ${{ values.clusterSecrets }}
+    vaultIssuer:
+      enabled: ${{ values.vaultIssuer }}
+      authProvider: provider-vault
+      vaultProviderConfigRef: vault
+      vaultAddr: https://openbao.platform.sthings.lab
+      pkiRole: sthings-lab
+      caSourceSecret: openbao-pki-source-ca  # pragma: allowlist secret
