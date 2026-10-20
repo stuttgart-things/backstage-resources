@@ -1,0 +1,228 @@
+---
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-clusterstack-pr
+  title: Create ClusterStack Order (machinery-hv)
+  description: >-
+    Order a Kubernetes cluster on Harvester through machinery-hv. Renders a
+    ClusterStack XR and opens a pull request against stuttgart-things/harvester
+    (clusters/machinery-hv/xrs); Flux applies it once the PR is merged.
+    Base-platform orders only -- orders with app profiles (homerun2,
+    tabletennis) need secret stores and a backup bucket and stay hand-written.
+  tags:
+    - crossplane
+    - harvester
+    - rancher
+    - kubernetes
+    - gitops
+    - xrs
+spec:
+  owner: platform-team
+  type: infrastructure
+
+  parameters:
+    - title: Cluster
+      description: Name and size of the cluster
+      required:
+        - name
+        - size
+      properties:
+        name:
+          title: Cluster Name
+          type: string
+          description: >-
+            Becomes the XR name, the Rancher cluster, the VM and the DNS name
+            (*.<name>.sthings.lab). Lowercase letters, digits and dashes only.
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          maxLength: 30
+          ui:autofocus: true
+
+        size:
+          title: Size
+          type: string
+          description: >-
+            T-shirt size from the xplane-cluster catalog. Becomes the machine
+            pool's HarvesterConfig.
+          default: medium
+          enum:
+            - small
+            - medium
+            - large
+          enumNames:
+            - 'small'
+            - 'medium  -  4 vCPU / 8 GiB RAM / 64 GiB disk (app-dev-hv, demo-hv)'
+            - 'large  -  8 vCPU / 16 GiB RAM (fits, but the biggest guest on Harvester)'
+
+        profiles:
+          title: Platform Profiles
+          type: array
+          description: >-
+            What the Platform installs on the cluster through platform's Argo CD.
+          default:
+            - network
+            - security
+            - storage-openebs
+          items:
+            type: string
+            enum:
+              - network
+              - security
+              - storage-openebs
+          uniqueItems: true
+          ui:widget: checkboxes
+
+    - title: Platform
+      description: Argo CD registration and the platform stage
+      properties:
+        argocdRegister:
+          title: Register in platform's Argo CD
+          type: boolean
+          default: true
+          description: >-
+            Registers the cluster in Argo CD on platform, with a clusterbook
+            reservation (gateway/DNS) in 192.168.10. Without it the profiles
+            above are never installed.
+        platformEnabled:
+          title: Platform stage enabled
+          type: boolean
+          default: true
+        fluxInit:
+          title: Flux bootstrap on the new cluster
+          type: boolean
+          default: false
+        clusterSecrets:
+          title: Cluster secrets
+          type: boolean
+          default: true
+        vaultIssuer:
+          title: cert-manager Vault issuer (OpenBao on platform)
+          type: boolean
+          default: true
+
+    - title: Before you order
+      description: >-
+        Every ClusterStack takes TWO addresses from the clusterbook pool
+        192.168.10 (node + gateway/DNS reservation). With only one free, the
+        cluster comes up but no platform app ever arrives (harvester#351).
+      required:
+        - addressesChecked
+      properties:
+        addressesChecked:
+          title: I checked that at least 2 addresses are free
+          type: boolean
+          const: true
+          description: >-
+            curl -sk https://clusterbook.platform.sthings.lab/api/v1/networks
+
+  steps:
+    - id: fetch-kustomization
+      name: Fetch the order list
+      action: fetch:plain:file
+      input:
+        url: https://github.com/stuttgart-things/harvester/blob/main/clusters/machinery-hv/xrs/kustomization.yaml
+        targetPath: ./kustomization.yaml
+
+    - id: parse-kustomization
+      name: Parse the order list
+      action: utils:yaml:parse
+      input:
+        filePath: ./kustomization.yaml
+
+    # The new order is APPENDED to kustomization.yaml as one line, so the
+    # curated comments in it survive. That only works while `resources:` is the
+    # file's last key -- refuse instead of writing a broken file. Also refuse a
+    # name that is already listed.
+    - id: check-kustomization
+      name: Check name and file layout
+      action: roadiehq:utils:jsonata
+      input:
+        data:
+          content: ${{ steps['parse-kustomization'].output.content }}
+          file: ${{ parameters.name }}.yaml
+        expression: |
+          (
+            $keys(content)[-1] != "resources"
+              ? $error("clusters/machinery-hv/xrs/kustomization.yaml: `resources:` is not the last key any more, so the order cannot be appended. Fix the template or order by hand.")
+              : file in content.resources
+                ? $error("An order " & file & " is already listed in clusters/machinery-hv/xrs/kustomization.yaml. Pick another name.")
+                : true
+          )
+
+    - id: append-order
+      name: Add the order to the list
+      action: roadiehq:utils:fs:append
+      input:
+        path: ./kustomization.yaml
+        content: "  # ordered through Backstage by ${{ user.entity.metadata.name | default('anon') }}\n  - ${{ parameters.name }}.yaml\n"
+
+    - id: render-clusterstack
+      name: Render the ClusterStack
+      action: fetch:template:file
+      input:
+        url: ./template/clusterstack.yaml
+        targetPath: ./${{ parameters.name }}.yaml
+        values:
+          name: ${{ parameters.name }}
+          size: ${{ parameters.size }}
+          profiles: ${{ parameters.profiles }}
+          argocdRegister: ${{ parameters.argocdRegister }}
+          platformEnabled: ${{ parameters.platformEnabled }}
+          fluxInit: ${{ parameters.fluxInit }}
+          clusterSecrets: ${{ parameters.clusterSecrets }}
+          vaultIssuer: ${{ parameters.vaultIssuer }}
+          owner: ${{ user.entity.metadata.name | default('anon') }}
+
+    - id: create-pull-request
+      name: Create Pull Request
+      action: publish:github:pull-request
+      input:
+        repoUrl: github.com?owner=stuttgart-things&repo=harvester
+        branchName: backstage/clusterstack-${{ parameters.name }}
+        title: "feat(machinery-hv): order ClusterStack ${{ parameters.name }}"
+        description: |
+          ## ClusterStack order: `${{ parameters.name }}`
+
+          Ordered through Backstage (*Create ClusterStack Order*) by
+          `${{ user.entity.metadata.name | default('anon') }}`.
+
+          | | |
+          |---|---|
+          | size | `${{ parameters.size }}` |
+          | profiles | `${{ parameters.profiles | join(', ') }}` |
+          | Argo CD registration | `${{ parameters.argocdRegister }}` |
+          | platform stage | `${{ parameters.platformEnabled }}` |
+
+          Before merging:
+          - [ ] at least **2** free addresses in the clusterbook pool `192.168.10`
+            (`curl -sk https://clusterbook.platform.sthings.lab/api/v1/networks`)
+
+          The order follows the rules in `clusters/machinery-hv/xrs/README.md`:
+          `management-cluster: machinery-hv`, `prune: disabled`, and
+          `no-creator-rbac` (rule 5, honoured at create only).
+
+          **Deleting is not a revert.** The Kustomization runs with
+          `prune: false`: set `platformEnabled: false`, wait for the Platform to
+          go, then `kubectl delete clusterstack ${{ parameters.name }}`, and only
+          then remove the file and its line in `kustomization.yaml`.
+        targetPath: clusters/machinery-hv/xrs
+
+  output:
+    links:
+      - title: Pull Request
+        icon: github
+        url: ${{ steps['create-pull-request'].output.remoteUrl }}
+    text:
+      - title: Next Steps
+        content: |
+          PR created at ${{ steps['create-pull-request'].output.remoteUrl }}
+
+          1. Review and merge the PR. Flux (`machinery-hv-xrs`) applies the
+             order within the hour, or right away with
+             `flux reconcile ks machinery-hv-xrs` on machinery-hv.
+          2. Watch it: `kubectl get clusterstack ${{ parameters.name }}` and
+             `crossplane resource trace clusterstack ${{ parameters.name }}` on
+             machinery-hv. The node, `access` and `platform` stages take tens
+             of minutes.
+          3. Deleting is two phases, not a revert. See
+             `clusters/machinery-hv/xrs/README.md`, "Deleting an XR".
