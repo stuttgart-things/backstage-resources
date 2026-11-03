@@ -31,6 +31,39 @@ metadata:
 spec:
   memberOf: [guests]
 ---
+# Zitadel users (LabDA, LabUL). Sign-in resolves them by their Zitadel
+# username; the groups come from their Zitadel project roles, not from here.
+# memberOf stays empty: an entry here would add to the roles -- [guests] would
+# turn a beta-only tester into a developer. The entities exist so that what
+# they own (orders, requested services) does not point at a missing user.
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: doc
+spec:
+  memberOf: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: biff
+spec:
+  memberOf: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: mcfly
+spec:
+  memberOf: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: indy
+spec:
+  memberOf: []
+---
 apiVersion: backstage.io/v1alpha1
 kind: Group
 metadata:
