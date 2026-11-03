@@ -3,8 +3,10 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: homerun2-service
-  title: Homerun2 Service
-  description: Scaffold a new homerun2 microservice (pitcher or catcher)
+  title: "[worker] Homerun2 Service"
+  description: >-
+    Started by the Dapr worker from request-homerun2-service -- do not run by hand
+    except to recover a run. Scaffold a new homerun2 microservice (pitcher or catcher)
   tags:
     - golang
     - redis
@@ -12,7 +14,15 @@ metadata:
     - microservice
 spec:
   owner: platform-team
-  type: service
+  # Run by the Dapr worker from request-homerun2-service
+  # (stuttgart-things backstage/templates): the request pull request is the
+  # approval, merged by platform; the worker then runs this template with its
+  # service token. The repository is created with Backstage's GitHub
+  # integration (no user token under the worker -- publish:github falls back),
+  # and the catalog entry comes from the Location file the request PR adds,
+  # so there is no catalog:register here: developers may not register
+  # entities (sthings-backstage docs/permissions.md).
+  type: worker-step
 
   parameters:
     - title: Service Information
@@ -71,6 +81,13 @@ spec:
             catalogFilter:
               kind: Group
 
+        requestedBy:
+          title: Requested by
+          type: string
+          description: >-
+            Set by the request template (the user who asked); becomes the
+            backstage.stuttgart-things.com/requested-by annotation.
+          ui:widget: hidden
     - title: Redis Configuration
       properties:
         redisStream:
@@ -126,6 +143,7 @@ spec:
           goModule: github.com/${{ (parameters.repoUrl | parseRepoUrl).owner }}/homerun2-${{ parameters.serviceName }}
           repoOwner: ${{ (parameters.repoUrl | parseRepoUrl).owner }}
           repoName: ${{ (parameters.repoUrl | parseRepoUrl).repo }}
+          requestedBy: ${{ parameters.requestedBy }}
 
     - id: publish
       name: Publish to GitHub
@@ -138,21 +156,11 @@ spec:
         token: ${{ secrets.USER_OAUTH_TOKEN }}
         topics: ${{ parameters.repoTags }}
 
-    - id: register
-      name: Register in Catalog
-      action: catalog:register
-      input:
-        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
-        catalogInfoPath: /catalog-info.yaml
-
   output:
     links:
       - title: Repository
         icon: github
         url: ${{ steps['publish'].output.remoteUrl }}
-      - title: Open in Catalog
-        icon: catalog
-        entityRef: ${{ steps['register'].output.entityRef }}
     text:
       - title: Repository Created
         content: |
