@@ -5,6 +5,9 @@ metadata:
   name: ${{ values.fullName }}
   description: ${{ values.description }}
   annotations:
+{%- if values.requestedBy %}
+    backstage.stuttgart-things.com/requested-by: ${{ values.requestedBy }}
+{%- endif %}
     github.com/project-slug: ${{ values.orgName }}/${{ values.fullName }}
     backstage.io/techdocs-ref: url:https://github.com/${{ values.orgName }}/${{ values.fullName }}/tree/main
     backstage.io/source-location: url:https://github.com/${{ values.orgName }}/${{ values.fullName }}
