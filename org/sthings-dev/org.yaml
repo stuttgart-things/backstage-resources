@@ -94,3 +94,15 @@ metadata:
 spec:
   type: team
   children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: beta-services
+  description: >-
+    Beta testers of the services track -- request a Go or homerun2 service
+    repository (request-go-service, request-homerun2-service). Members come
+    from the Zitadel role backstage-beta-services.
+spec:
+  type: beta-track
+  children: []
