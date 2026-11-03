@@ -3,7 +3,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: ${{ values.fullName }}
-  description: ${{ values.description }}
+  description: ${{ values.description | dump }}
   annotations:
 {%- if values.requestedBy %}
     backstage.stuttgart-things.com/requested-by: ${{ values.requestedBy }}
