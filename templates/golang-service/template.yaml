@@ -102,15 +102,17 @@ spec:
         goVersion:
           title: Go Version
           type: string
-          default: "1.26"
+          # Keep every version the request-go-service form (stuttgart-things)
+          # offers: a request with a value missing here fails in the worker.
+          default: "1.27"
           enum:
+            - "1.27"
             - "1.26"
             - "1.25.6"
-            - "1.24.12"
           enumNames:
-            - "1.26 (Latest)"
+            - "1.27 (Latest)"
+            - "1.26"
             - "1.25.6"
-            - "1.24.12"
 
   steps:
     - id: fetch-base
