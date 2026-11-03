@@ -1,5 +1,5 @@
 site_name: ${{ values.fullName }}
-site_description: ${{ values.description }}
+site_description: ${{ values.description | dump }}
 nav:
   - Home: index.md
 {%- if values.serviceType == "pitcher" %}
