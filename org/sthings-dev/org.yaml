@@ -65,3 +65,32 @@ spec:
   members:
     - patrick-hermann-sva
     - sina-schlatter
+---
+# Groups granted by Zitadel roles (sthings-backstage resolver, docs/zitadel.md):
+# the role decides who is a member, not this file -- so no members here. The
+# entities exist so that an order owned by the group, or a user's group on
+# /settings, links to something instead of "Entities not found".
+#   backstage-beta-<track> -> group:default/beta-<track>
+#   backstage-team-<team>  -> group:default/<team>
+# (stuttgart-things/stuttgart-things#4276)
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: beta-vm-machinery
+  description: >-
+    Beta testers of the vm-machinery track -- order, resize and delete a VM on
+    machinery. Members come from the Zitadel role backstage-beta-vm-machinery.
+spec:
+  type: beta-track
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: hill-valley
+  description: >-
+    Test team that can own orders. Members come from the Zitadel role
+    backstage-team-hill-valley.
+spec:
+  type: team
+  children: []
