@@ -35,7 +35,7 @@ assignees: ''
 ## Environment
 
 - **OS**: [e.g., Ubuntu 22.04, macOS 14.0, Windows 11]
-- **Go version**: [e.g., 1.25.6]
+- **Go version**: [e.g., 1.27.3]
 - **Version/Commit**: [e.g., v1.0.0 or commit hash]
 - **Architecture**: [e.g., amd64, arm64]
 
