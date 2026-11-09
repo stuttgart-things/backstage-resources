@@ -4,7 +4,7 @@ go 1.26.6
 
 require (
 	charm.land/bubbletea/v2 v2.0.10
-	charm.land/lipgloss/v2 v2.0.6
+	charm.land/lipgloss/v2 v2.1.0
 	github.com/stuttgart-things/homerun-library/v4 v4.5.0
 	github.com/redis/go-redis/v9 v9.22.0
 {%- if values.serviceType == "catcher" %}
