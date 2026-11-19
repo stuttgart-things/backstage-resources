@@ -90,3 +90,18 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/harvester-vm/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: machinery
+  description: The machinery system -- Crossplane packages and the Flux apps the Harvester lab runs on (stuttgart-things/harvester#349)
+spec:
+  type: url
+  # Taken over from the sthings-dev index after the switch to sthings-harvester
+  # (2026-09-30). kcl is left out on purpose; the System entity is shared with
+  # sthings-dev.
+  targets:
+    - https://github.com/stuttgart-things/backstage-resources/blob/main/services/sthings-dev/systems/machinery.yaml
+    - https://github.com/stuttgart-things/crossplane-configurations/blob/main/catalog-info.yaml
+    - https://github.com/stuttgart-things/flux/blob/main/catalog-info.yaml
