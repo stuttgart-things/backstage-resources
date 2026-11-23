@@ -107,3 +107,13 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/backstage-resources/blob/main/templates/harvester-vm/template.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: sthings-backstage-offerings
+  description: Curated offerings for the /offerings page (sthings-backstage#243, docs/offerings.md)
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/sthings-backstage/blob/main/catalog/offerings.yaml
