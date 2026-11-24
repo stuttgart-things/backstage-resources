@@ -1,0 +1,27 @@
+---
+# yamllint for the Repository Linting check (github-workflow-templates
+# call-repository-linting.yaml). The rules are the blueprint module's
+# built-in defaults; this file only adds the ignores.
+extends: default
+
+# Not plain YAML, so yamllint can only report syntax errors there:
+# - Scaffolder templates and skeletons are Nunjucks templates ({% ... %},
+#   ${{ ... }}) that become YAML only after rendering.
+# - SOPS-encrypted files are written by sops with its own indentation.
+ignore: |
+  templates/*/skeleton/
+  templates/*/template/
+  *.enc.yaml
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+  document-start: disable
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no']
+  comments:
+    min-spaces-from-content: 1
+  indentation:
+    spaces: 2
+    indent-sequences: true
