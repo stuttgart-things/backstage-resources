@@ -117,3 +117,18 @@ spec:
   type: url
   targets:
     - https://github.com/stuttgart-things/sthings-backstage/blob/main/catalog/offerings.yaml
+---
+# Claude Code marketplace of stuttgart-things: the repo as Component, its
+# plugins and skills as AiResource entities (kind from the Backstage ai-model
+# module, sthings-backstage >= v1.38.0). The portal instances must allow
+# AiResource in catalog.rules (stuttgart-things#4891), or those entities are
+# dropped with only a warning in the backend log.
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: claude-code-plugins
+  description: Claude Code plugins and skills (stuttgart-things/claude-plugins)
+spec:
+  type: url
+  targets:
+    - https://github.com/stuttgart-things/claude-plugins/blob/main/catalog-info.yaml
