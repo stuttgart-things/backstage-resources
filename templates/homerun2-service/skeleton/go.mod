@@ -3,7 +3,7 @@ module ${{ values.goModule }}
 go 1.26.6
 
 require (
-	charm.land/bubbletea/v2 v2.1.2
+	charm.land/bubbletea/v2 v2.2.0
 	charm.land/lipgloss/v2 v2.1.1
 	github.com/stuttgart-things/homerun-library/v4 v4.6.0
 	github.com/redis/go-redis/v9 v9.24.0
